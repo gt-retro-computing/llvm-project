@@ -386,9 +386,9 @@ let isBranch = 1, isTerminator = 1 in {
                       [(Z80brcond bb:$tgt, imm:$cc, F)]>;
     def JRCC   : Io  <NoPre, 0x18, "jr", "\t$cc, $tgt", "",
                       (outs), (ins jmptargetoff:$tgt, cc:$cc)>;
-    def JP16CC : I16i<NoPre, 0xC3, "jp", "\t$cc, $tgt", "",
+    def JP16CC : I16i<NoPre, 0xC2, "jp", "\t$cc, $tgt", "",
                       (outs), (ins jmptarget:$tgt, cc:$cc)>;
-    def JP24CC : I24i<NoPre, 0xC3, "jp", "\t$cc, $tgt", "",
+    def JP24CC : I24i<NoPre, 0xC2, "jp", "\t$cc, $tgt", "",
                       (outs), (ins jmptarget:$tgt, cc:$cc)>;
   }
 }
@@ -681,6 +681,42 @@ multiclass UnOp8RFF<Prefix prefix, bits<8> opcode, string mnemonic,
 multiclass BinOp8RF<Prefix prefix, bits<3> opcode, string mnemonic,
                     bit compare = 0> {
   let isCompare = compare, Defs = [A, F], Uses = [A] in {
+    def 8ar : I <prefix, {0b10, opcode, 0b000}, mnemonic, "\t$src", "",
+                 (outs), (ins    R8:$src),
+                 [(set A, F,
+                       (!cast<SDNode>(!strconcat("Z80", mnemonic, "_flag"))
+                           A, R8:$src))]>;
+    def 8ai : Ii<prefix, {0b11, opcode, 0b110}, mnemonic, "\t$src", "",
+                 (outs), (ins i8imm:$src),
+                 [(set A, F,
+                       (!cast<SDNode>(!strconcat("Z80", mnemonic, "_flag"))
+                           A, imm:$src))]>;
+    let mayLoad = 1 in {
+      def 8ap : I <prefix, {0b10, opcode, 0b110}, mnemonic, "\t$src", "",
+                   (outs), (ins   ptr:$src),
+                   [(set A, F,
+                         (!cast<SDNode>(!strconcat("Z80", mnemonic, "_flag"))
+                             A, (i8 (load   iPTR:$src))))]>;
+      def 8ao : Io<prefix, {0b10, opcode, 0b110}, mnemonic, "\t$src", "",
+                   (outs), (ins   off:$src),
+                   [(set A, F,
+                         (!cast<SDNode>(!strconcat("Z80", mnemonic, "_flag"))
+                             A, (i8 (load offpat:$src))))]>;
+    }
+  }
+  def : Pat<(!cast<SDNode>(mnemonic) A,  R8:$src),
+            (!cast<Instruction>(!strconcat(NAME, "8ar"))  R8:$src)>;
+  def : Pat<(!cast<SDNode>(mnemonic) A, imm:$src),
+            (!cast<Instruction>(!strconcat(NAME, "8ai")) imm:$src)>;
+  def : Pat<(!cast<SDNode>(mnemonic) A, (load iPTR:$src)),
+            (!cast<Instruction>(!strconcat(NAME, "8ap")) ptr:$src)>;
+  def : Pat<(!cast<SDNode>(mnemonic) A, (load offpat:$src)),
+            (!cast<Instruction>(!strconcat(NAME, "8ao")) off:$src)>;
+}
+
+multiclass BinOp8RFA<Prefix prefix, bits<3> opcode, string mnemonic,
+                    bit compare = 0> {
+  let isCompare = compare, Defs = [A, F], Uses = [A] in {
     def 8ar : I <prefix, {0b10, opcode, 0b000}, mnemonic, "\ta, $src", "",
                  (outs), (ins    R8:$src),
                  [(set A, F,
@@ -713,6 +749,7 @@ multiclass BinOp8RF<Prefix prefix, bits<3> opcode, string mnemonic,
   def : Pat<(!cast<SDNode>(mnemonic) A, (load offpat:$src)),
             (!cast<Instruction>(!strconcat(NAME, "8ao")) off:$src)>;
 }
+
 multiclass BinOp8RFF<Prefix prefix, bits<3> opcode, string mnemonic,
                      SDNode node, bit compare = 0> {
   let isCompare = compare, Defs = [A, F], Uses = [A, F] in {
@@ -826,7 +863,7 @@ defm RES : BitOp8R  <       2, "res">;
 defm SET : BitOp8R  <       3, "set">;
 defm INC : UnOp8RF  <NoPre, 4, "inc">;
 defm DEC : UnOp8RF  <NoPre, 5, "dec">;
-defm ADD : BinOp8RF <NoPre, 0, "add">;
+defm ADD : BinOp8RFA <NoPre, 0, "add">;
 defm ADC : BinOp8RFF<NoPre, 1, "adc", adde>;
 defm SUB : BinOp8RF <NoPre, 2, "sub", 1>;
 defm SBC : BinOp8RFF<NoPre, 3, "sbc", sube>;

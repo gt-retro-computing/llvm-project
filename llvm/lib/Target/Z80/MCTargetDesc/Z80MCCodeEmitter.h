@@ -14,10 +14,12 @@
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCCODEEMITTER_H
 
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include <cstdint>
 #include <llvm/MC/MCInstrDesc.h>
 #include <llvm/MC/MCRegisterInfo.h>
-#include "llvm/MC/SubtargetFeature.h"
+
+using namespace llvm;
 
 namespace llvm {
 
@@ -46,12 +48,21 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
-  void emitZ80Prefix(const MCInst &MI, llvm::MCInstrDesc &MIDesc, unsigned int &CurByte,
-                  raw_ostream &OS) const;
+  void emitZ80Prefix(const MCInst &MI, const MCInstrDesc &MIDesc,
+                     unsigned int &CurByte, raw_ostream &OS) const;
+  void emitImmediate(const MCInst &MI, unsigned &CurByte, raw_ostream &OS) const;
+
   void patchCC(const MCInst &MI, uint8_t &PrimaryOpcode) const;
+  void patchRegister(const MCInst &MI, uint8_t &PrimaryOpcode) const;
+
+  uint8_t getZ80RegisterEncoding(const MCInst &MI,
+                                 unsigned int RegisterNo) const;
+  void emitWordLE(unsigned short C, unsigned int &CurByte,
+                  raw_ostream &OS) const;
 };
 
 MCCodeEmitter *createZ80MCCodeEmitter(const MCInstrInfo &MCII,
-                                       const MCRegisterInfo &MRI, MCContext &Ctx);
+                                      const MCRegisterInfo &MRI,
+                                      MCContext &Ctx);
 } // end namespace llvm
 #endif // LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCCODEEMITTER_H

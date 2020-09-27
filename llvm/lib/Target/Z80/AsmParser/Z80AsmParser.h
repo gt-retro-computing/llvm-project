@@ -75,6 +75,10 @@ struct Z80Operand final : public MCParsedAsmOperand {
     const MCExpr *Val;
   };
 
+  struct AbsImmOp {
+    uint64_t Val;
+  };
+
   struct MemOff {
     unsigned Reg;
     const MCExpr *Off;
@@ -86,6 +90,7 @@ struct Z80Operand final : public MCParsedAsmOperand {
 
   union {
     struct TokOp Tok;
+    struct AbsImmOp AbsImm;
     struct RegOp Reg;
     struct ImmOp Imm;
     struct CondCode CondOp;
@@ -142,7 +147,6 @@ struct Z80Operand final : public MCParsedAsmOperand {
 
   static std::unique_ptr<Z80Operand>
   CreateMemOff(unsigned RegNo, const MCExpr *Off, SMLoc S, SMLoc E);
-
   bool isZ80MemOff() const;
   bool isZ80CC() const;
 };

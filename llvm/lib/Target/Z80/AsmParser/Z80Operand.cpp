@@ -95,7 +95,7 @@ void Z80Operand::addZ80MemAOperands(MCInst &Inst, unsigned int N) const {
 void Z80Operand::addZ80MemOffOperands(MCInst &Inst, unsigned N) const {
   assert(N == 2);
   Inst.addOperand(MCOperand::createReg(this->MemOffset.Reg));
-  Inst.addOperand(MCOperand::createExpr(this->MemOffset.Off));
+  addExpr(Inst, this->MemOffset.Off);
 }
 
 void Z80Operand::addZ80CCOperands(MCInst &Inst, unsigned int N) const {
