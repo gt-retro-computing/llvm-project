@@ -62,11 +62,9 @@ class Z80Inst<Mode mode, Prefix prefix, bits<8> opcode, ImmType immediate,
   let TSFlags{5-4} = mode.Value;
   let TSFlags{7-6} = immediate.Value;
   let TSFlags{15-8} = opcode;
-
-  let isCodeGenOnly = 1;
 }
 
-let isPseudo = 1 in
+let isPseudo = 1, isCodeGenOnly = 1 in
 class Pseudo<string mnem, string args = "", string con = "",
              dag outs = (outs), dag ins = (ins), list<dag> pattern = []>
   : Z80Inst< AnyMode, NoPre, 0, NoImm,  outs, ins, pattern,
@@ -171,4 +169,5 @@ class I24oi<Prefix prefix, bits<8> opcode,
 class P<dag outs = (outs), dag ins = (ins), list<dag> pattern = []>
   : Z80Inst<AnyMode, NoPre, 0, NoImm, outs, ins, pattern> {
   let isPseudo = 1;
+  let isCodeGenOnly = 1;
 }

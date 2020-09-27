@@ -160,6 +160,20 @@ def Z80_COND_M  : PatLeaf<(i8 7)>;
 // Z80 Operand Definitions.
 //
 
+def Z80MemAsmOperand : AsmOperandClass {
+  let Name = "Z80MemA";
+  let RenderMethod = "addZ80MemAOperands";
+  let ParserMethod = "ParseMemAOperand";
+}
+
+def Z80MemOffAsmOperand : AsmOperandClass {
+    let Name = "Z80MemOff";
+}
+
+def Z80CCAsmOperand : AsmOperandClass {
+    let Name = "Z80CC";
+}
+
 def aptr_rc : PointerLikeRegClass<1>;
 def iptr_rc : PointerLikeRegClass<2>;
 
@@ -172,11 +186,13 @@ def ptr : Operand<iPTR> {
   let PrintMethod = "printPtr";
   let MIOperandInfo = (ops aptr_rc);
   let OperandType = "OPERAND_MEMORY";
+  let ParserMatchClass = Z80MemAsmOperand;
 }
 def off : Operand<iPTR> {
   let PrintMethod = "printOff";
   let MIOperandInfo = (ops iptr_rc, i8imm);
   let OperandType = "OPERAND_MEMORY";
+  let ParserMatchClass = Z80MemOffAsmOperand;
 }
 def off16 : Operand<i16> {
   let PrintMethod = "printAddr";
@@ -199,6 +215,7 @@ def jmptargetoff : Operand<OtherVT>;
 
 def cc : Operand<i8> {
   let PrintMethod = "printCCOperand";
+  let ParserMatchClass = Z80CCAsmOperand;
 }
 
 //===----------------------------------------------------------------------===//
@@ -357,9 +374,9 @@ let isBranch = 1, isTerminator = 1 in {
     def JP24 : I24i<NoPre, 0xC3, "jp", "\t$tgt", "",
                     (outs), (ins jmptarget:$tgt)>;
     let isIndirectBranch = 1 in {
-      def JP16r : I16<NoPre, 0xE9, "jp", "\t($tgt)", "",
+      def JP16r : I16<NoPre, 0xE9, "jp", "\t(${tgt})", "",
                       (outs), (ins A16:$tgt), [(brind A16:$tgt)]>;
-      def JP24r : I24<NoPre, 0xE9, "jp", "\t($tgt)", "",
+      def JP24r : I24<NoPre, 0xE9, "jp", "\t(${tgt})", "",
                       (outs), (ins A24:$tgt), [(brind A24:$tgt)]>;
     }
   }
@@ -409,52 +426,52 @@ let isMoveImm = 1, isReMaterializable = 1 in {
 
 let mayLoad = 1, canFoldAsLoad = 1, isReMaterializable = 1 in {
   let Defs = [A] in
-  def LD8am  : I8i   <NoPre,   0x3A, "ld", "\ta, $src",    "",
+  def LD8am  : I8i   <NoPre,   0x3A, "ld", "\ta, (${src})",    "",
                       (outs), (ins mem:$src), [(set A, (load mempat:$src))]>;
-  def LD16rm : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD16rm : Pseudo<               "ld", "\t$dst, (${src})", "",
                       (outs R16:$dst), (ins mem:$src),
                       [(set R16:$dst, (load mempat:$src))]>;
-  def LD24rm : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD24rm : Pseudo<               "ld", "\t$dst, (${src})", "",
                       (outs R24:$dst), (ins mem:$src),
                       [(set R24:$dst, (load mempat:$src))]>;
-  def LD16am : I16i  <Idx0Pre, 0x2A, "ld", "\t$dst, $src", "",
+  def LD16am : I16i  <Idx0Pre, 0x2A, "ld", "\t$dst, (${src})", "",
                     (outs A16:$dst), (ins mem:$src)>;
-  def LD24am : I24i  <Idx0Pre, 0x2A, "ld", "\t$dst, $src", "",
+  def LD24am : I24i  <Idx0Pre, 0x2A, "ld", "\t$dst, (${src})", "",
                     (outs A24:$dst), (ins mem:$src)>;
-  def LD16om : I16i  <EDPre,   0x4B, "ld", "\t$dst, $src", "",
+  def LD16om : I16i  <EDPre,   0x4B, "ld", "\t$dst, (${src})", "",
                     (outs O16:$dst), (ins mem:$src)>;
-  def LD24om : I24i  <EDPre,   0x4B, "ld", "\t$dst, $src", "",
+  def LD24om : I24i  <EDPre,   0x4B, "ld", "\t$dst, (${src})", "",
                     (outs O24:$dst), (ins mem:$src)>;
 
-  def LD8rp  : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD8rp  : Pseudo<               "ld", "\t$dst, (${src})", "",
                      (outs R8:$dst), (ins ptr:$src)>;
-  def LD8gp  : I     <NoPre,   0x46, "ld", "\t$dst, $src", "",
+  def LD8gp  : I     <NoPre,   0x46, "ld", "\t$dst, (${src})", "",
                      (outs G8:$dst), (ins ptr:$src),
                      [(set G8:$dst, (load iPTR:$src))]>;
-  def LD16rp : I16   <EDPre,   0x07, "ld", "\t$dst, $src", "",
+  def LD16rp : I16   <EDPre,   0x07, "ld", "\t$dst, (${src})", "",
                       (outs R16:$dst), (ins ptr:$src),
                       [(set R16:$dst, (load iPTR:$src))]>,
                Requires<[HaveEZ80Ops]>;
-  def LD88rp : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD88rp : Pseudo<               "ld", "\t$dst, (${src})", "",
                       (outs R16:$dst), (ins ptr:$src),
                       [(set R16:$dst, (load iPTR:$src))]>;
-  def LD24rp : I24   <EDPre,   0x07, "ld", "\t$dst, $src", "",
+  def LD24rp : I24   <EDPre,   0x07, "ld", "\t$dst, (${src})", "",
                       (outs R24:$dst), (ins ptr:$src),
                       [(set R24:$dst, (load iPTR:$src))]>;
 
-  def LD8ro  : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD8ro  : Pseudo<               "ld", "\t$dst, (${src})", "",
                      (outs R8:$dst), (ins off:$src)>;
-  def LD8go  : Io    <Idx1Pre, 0x46, "ld", "\t$dst, $src", "",
+  def LD8go  : Io    <Idx1Pre, 0x46, "ld", "\t$dst, (${src})", "",
                      (outs   G8:$dst), (ins off:$src),
                      [(set G8:$dst, (load offpat:$src))]>;
-  def LD16ro : I16o  <Idx1Pre, 0x07, "ld", "\t$dst, $src", "",
+  def LD16ro : I16o  <Idx1Pre, 0x07, "ld", "\t$dst, (${src})", "",
                       (outs R16:$dst), (ins off:$src),
                       [(set R16:$dst, (load offpat:$src))]>,
                Requires<[HaveEZ80Ops]>;
-  def LD88ro : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD88ro : Pseudo<               "ld", "\t$dst, (${src})", "",
                       (outs R16:$dst), (ins off:$src),
                       [(set R16:$dst, (load offpat:$src))]>;
-  def LD24ro : I24o  <Idx1Pre, 0x07, "ld", "\t$dst, $src", "",
+  def LD24ro : I24o  <Idx1Pre, 0x07, "ld", "\t$dst, (${src})", "",
                       (outs R24:$dst), (ins off:$src),
                       [(set R24:$dst, (load offpat:$src))]>;
 }
@@ -474,45 +491,45 @@ def : Pat<(i24 (extloadi16 offpat:$src)), (LD24ro off:$src)>;
 
 let mayStore = 1 in {
   let Uses = [A] in
-  def LD8ma  : I8i   <  NoPre, 0x32, "ld", "\t$dst, a",    "",
+  def LD8ma  : I8i   <  NoPre, 0x32, "ld", "\t(${dst}), a",    "",
                       (outs), (ins mem:$dst), [(store A, mempat:$dst)]>;
-  def LD16mr : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD16mr : Pseudo<               "ld", "\t(${dst}), $src", "",
                       (outs), (ins mem:$dst, R16:$src),
                       [(store R16:$src, mempat:$dst)]>;
-  def LD24mr : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD24mr : Pseudo<               "ld", "\t(${dst}), $src", "",
                       (outs), (ins mem:$dst, R24:$src),
                       [(store R24:$src, mempat:$dst)]>;
-  def LD16ma : I16i  <Idx1Pre, 0x22, "ld", "\t$dst, $src", "",
+  def LD16ma : I16i  <Idx1Pre, 0x22, "ld", "\t(${dst}), $src", "",
                       (outs), (ins mem:$dst, A16:$src)>;
-  def LD24ma : I24i  <Idx1Pre, 0x22, "ld", "\t$dst, $src", "",
+  def LD24ma : I24i  <Idx1Pre, 0x22, "ld", "\t(${dst}), $src", "",
                       (outs), (ins mem:$dst, A24:$src)>;
-  def LD16mo : I16i  <  EDPre, 0x43, "ld", "\t$dst, $src", "",
+  def LD16mo : I16i  <  EDPre, 0x43, "ld", "\t(${dst}), $src", "",
                       (outs), (ins mem:$dst, O16:$src)>;
-  def LD24mo : I24i  <  EDPre, 0x43, "ld", "\t$dst, $src", "",
+  def LD24mo : I24i  <  EDPre, 0x43, "ld", "\t(${dst}), $src", "",
                       (outs), (ins mem:$dst, O24:$src)>;
 
-  def LD8pr  : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD8pr  : Pseudo<               "ld", "\t(${dst}), $src", "",
                       (outs), (ins ptr:$dst, R8:$src)>;
-  def LD8pg  : I     <  NoPre, 0x70, "ld", "\t$dst, $src", "",
+  def LD8pg  : I     <  NoPre, 0x70, "ld", "\t(${dst}), $src", "",
                       (outs), (ins ptr:$dst, G8:$src),
                       [(store G8:$src, iPTR:$dst)]>;
-  def LD16pr : I16   <  EDPre, 0x0F, "ld", "\t$dst, $src", "",
+  def LD16pr : I16   <  EDPre, 0x0F, "ld", "\t(${dst}), $src", "",
                       (outs), (ins ptr:$dst, R16:$src),
                       [(store R16:$src, iPTR:$dst)]>,
                Requires<[In16BitMode, HaveEZ80Ops]>;
-  def LD88pr : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD88pr : Pseudo<               "ld", "\t(${dst}), $src", "",
                       (outs), (ins ptr:$dst, R16:$src),
                       [(store R16:$src, iPTR:$dst)]>;
-  def LD24pr : I24   <  EDPre, 0x0F, "ld", "\t$dst, $src", "",
+  def LD24pr : I24   <  EDPre, 0x0F, "ld", "\t(${dst}), $src", "",
                       (outs), (ins ptr:$dst, R24:$src),
                       [(store R24:$src, iPTR:$dst)]>;
 
-  def LD8or  : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD8or  : Pseudo<               "ld", "\t(${dst}), $src", "",
                       (outs), (ins off:$dst, R8:$src)>;
-  def LD8og  : Io    <Idx0Pre, 0x70, "ld", "\t$dst, $src", "",
+  def LD8og  : Io    <Idx0Pre, 0x70, "ld", "\t(${dst}), $src", "",
                       (outs), (ins off:$dst, G8:$src),
                       [(store G8:$src, offpat:$dst)]>;
-  def LD16or : I16o  <Idx0Pre, 0x0F, "ld", "\t$dst, $src", "",
+  def LD16or : I16o  <Idx0Pre, 0x0F, "ld", "\t(${dst}), $src", "",
                       (outs), (ins off:$dst, R16:$src)>,
                Requires<[HaveEZ80Ops]>;
 }
@@ -523,7 +540,7 @@ let mayStore = 1 in {
 def : Pat<(store G16:$src, offpat:$dst), (LD16or off:$dst, R16:$src)>,
       Requires<[In16BitMode, HaveEZ80Ops]>;
 let mayStore = 1 in {
-  def LD88or : Pseudo<               "ld", "\t$dst, $src", "",
+  def LD88or : Pseudo<               "ld", "\t(${dst}), $src", "",
                       (outs), (ins off:$dst, R16:$src),
                       [(store R16:$src, offpat:$dst)]>;
   def LD24or : I24o  <Idx0Pre, 0x0F, "ld", "\t$dst, $src", "",
@@ -541,10 +558,8 @@ let mayStore = 1 in {
                       [(store (i8 imm:$src), offpat:$dst)]>;
 }
 
-let Defs = [SPS] in
-def LD16SP : I16<Idx0Pre, 0xF9, "ld", "\tsp, $src", "", (outs), (ins A16:$src)>;
-let Defs = [SPL] in
-def LD24SP : I24<Idx0Pre, 0xF9, "ld", "\tsp, $src", "", (outs), (ins A24:$src)>;
+def LD16SP : I16<Idx0Pre, 0xF9, "ld", "\t$sp, $src", "", (outs SP16:$sp), (ins A16:$src)>;
+def LD24SP : I24<Idx0Pre, 0xF9, "ld", "\t$sp, $src", "", (outs SP24:$sp), (ins A24:$src)>;
 
 def EXAF : I<NoPre, 0x08, "ex", "\taf, af'">;
 def EXX  : I<NoPre, 0xD9, "exx">;
@@ -554,13 +569,13 @@ def EX16DE : I16<NoPre, 0xEB, "ex", "\tde, hl">;
 let Defs = [UDE, UHL], Uses = [UDE, UHL] in
 def EX24DE : I24<NoPre, 0xEB, "ex", "\tde, hl">;
 
-let Constraints = "$imp = $dst" in {
+let Constraints = "$imp = $dst, $imp2 = $dst2" in {
 let Uses = [SPS] in
-def EX16SP : I16<Idx0Pre, 0xE3, "ex", "\t(sp), $dst", "",
-                 (outs A16:$dst), (ins A16:$imp)>;
+def EX16SP : I16<Idx0Pre, 0xE3, "ex", "\t(${dst2}), $dst", "",
+                 (outs A16:$dst, SP16:$dst2), (ins A16:$imp, SP16:$imp2)>;
 let Uses = [SPL] in
-def EX24SP : I24<Idx0Pre, 0xE3, "ex", "\t(sp), $dst", "",
-                 (outs A24:$dst), (ins A24:$imp)>;
+def EX24SP : I24<Idx0Pre, 0xE3, "ex", "\t(${dst2}), $dst", "",
+                 (outs A24:$dst, SP24:$dst2), (ins A24:$imp, SP24:$imp2)>;
 }
 
 let Defs = [SPS], Uses = [SPS] in {
@@ -874,10 +889,10 @@ let Defs = [F] in {
   def ADD24ao : I24<Idx0Pre, 0x09, "add", "\t$dst, $src", "$imp = $dst",
                     (outs A24:$dst), (ins A24:$imp, O24:$src),
                     [(set A24:$dst, F, (Z80add_flag A24:$imp, O24:$src))]>;
-  let Uses = [SPS] in
-  def ADD16SP : I16<Idx0Pre, 0x39, "add", "\t$dst, sp",   "$imp = $dst",
-                   (outs A16:$dst), (ins A16:$imp),
-                   [(set A16:$dst, F, (Z80add_flag A16:$imp, SPS))]>;
+
+  def ADD16SP : I16<Idx0Pre, 0x39, "add", "\t$dst, $sp",   "$imp = $dst",
+                   (outs A16:$dst), (ins A16:$imp, SP16:$sp),
+                   [(set A16:$dst, F, (Z80add_flag A16:$imp, SP16:$sp))]>;
   let Uses = [SPL] in
   def ADD24SP : I24<Idx0Pre, 0x39, "add", "\t$dst, sp",   "$imp = $dst",
                    (outs A24:$dst), (ins A24:$imp),

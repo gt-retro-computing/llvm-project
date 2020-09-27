@@ -529,7 +529,7 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::EX24DE : Z80::EX16DE))
           .addReg(ExReg, RegState::ImplicitDefine)
           .addReg(SrcReg, RegState::ImplicitKill);
-    BuildMI(MBB, MI, DL, get(DstReg == Z80::SPL ? Z80::LD24SP : Z80::LD16SP))
+    BuildMI(MBB, MI, DL, get(DstReg == Z80::SPL ? Z80::LD24SP : Z80::LD16SP), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
     if (ExReg)
       BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::EX24DE : Z80::EX16DE))
@@ -559,7 +559,9 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             DstReg).addReg(DstReg)->addRegisterDead(Z80::F, &getRegisterInfo());
     if (PopReg) {
       BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::EX24SP : Z80::EX16SP), DstReg)
-          .addReg(DstReg);
+          .addReg(Is24Bit ? Z80::SPL : Z80::SPS, RegState::Define)
+          .addReg(DstReg)
+          .addReg(Is24Bit ? Z80::SPL : Z80::SPS);
       BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::POP24r : Z80::POP16r), PopReg);
     } else if (ExReg)
       BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::EX24DE : Z80::EX16DE))
@@ -997,7 +999,10 @@ bool Z80InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       if (Reg == Z80::HL)
         // Restore scratch register and prepare to set original register below
         BuildMI(MBB, Next, DL, get(Is24Bit ? Z80::EX24SP : Z80::EX16SP),
-                ScratchReg).addReg(ScratchReg);
+                ScratchReg)
+            .addReg(Is24Bit ? Z80::SPL : Z80::SPS, RegState::Define)
+            .addReg(ScratchReg)
+            .addReg(Is24Bit ? Z80::SPL : Z80::SPS);
       else
         // Set original register directly
         copyPhysReg(MBB, Next, DL, OrigReg, Reg);
@@ -1073,7 +1078,10 @@ bool Z80InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       else if (Reg == Z80::HL)
         // Save and set scratch register
         BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::EX24SP : Z80::EX16SP),
-                ScratchReg).addReg(ScratchReg);
+                ScratchReg)
+            .addReg(Is24Bit ? Z80::SPL : Z80::SPS, RegState::Define)
+            .addReg(ScratchReg)
+            .addReg(Is24Bit ? Z80::SPL : Z80::SPS);
       else
         // Set scratch register directly
         copyPhysReg(MBB, MI, DL, Reg, OrigReg);

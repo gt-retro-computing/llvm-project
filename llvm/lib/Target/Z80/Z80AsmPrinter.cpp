@@ -53,11 +53,11 @@ void Z80AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
 }
 
 void Z80AsmPrinter::emitEndOfAsmFile(Module &M) {
-  Z80TargetStreamer *TS =
-      static_cast<Z80TargetStreamer *>(OutStreamer->getTargetStreamer());
-  for (const auto &Symbol : OutContext.getSymbols())
-    if (!Symbol.second->isDefined())
-      TS->emitExtern(Symbol.second);
+//  Z80TargetStreamer *TS =
+//      static_cast<Z80TargetStreamer *>(OutStreamer->getTargetStreamer());
+//  for (const auto &Symbol : OutContext.getSymbols())
+//    if (!Symbol.second->isDefined())
+//      TS->emitExtern(Symbol.second);
 }
 
 void Z80AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
@@ -176,9 +176,9 @@ bool Z80AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (ExtraCode && ExtraCode[0])
     return true; // Unknown modifier.
 
-  O << '(';
+//  O << '(';
   PrintOperand(MI, OpNum, Z80::NoSubRegister, O);
-  O << ')';
+//  O << ')';
   return false;
 }
 

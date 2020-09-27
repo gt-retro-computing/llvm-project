@@ -162,11 +162,11 @@ void Z80FrameLowering::BuildStackAdjustment(MachineFunction &MF,
     BuildMI(MBB, MI, DL, TII.get(Is24Bit ? Z80::LD24ri : Z80::LD16ri),
             ScratchReg).addImm(Offset);
     BuildMI(MBB, MI, DL, TII.get(Is24Bit ? Z80::ADD24SP : Z80::ADD16SP),
-            ScratchReg).addUse(ScratchReg)->addRegisterDead(Z80::F, TRI);
+            ScratchReg).addUse(ScratchReg).addReg(Is24Bit ? Z80::SPL : Z80::SPS)->addRegisterDead(Z80::F, TRI);
     ResultReg = ScratchReg;
     break;
   }
-  BuildMI(MBB, MI, DL, TII.get(Is24Bit ? Z80::LD24SP : Z80::LD16SP))
+  BuildMI(MBB, MI, DL, TII.get(Is24Bit ? Z80::LD24SP : Z80::LD16SP), Is24Bit ? Z80::SPL : Z80::SPS)
       .addUse(ResultReg, RegState::Kill);
 }
 
@@ -211,7 +211,7 @@ void Z80FrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MI, DL, TII.get(Is24Bit ? Z80::LD24ri : Z80::LD16ri), FrameReg)
         .addImm(0);
     BuildMI(MBB, MI, DL, TII.get(Is24Bit ? Z80::ADD24SP : Z80::ADD16SP),
-            FrameReg).addUse(FrameReg)->addRegisterDead(Z80::F, TRI);
+            FrameReg).addUse(FrameReg).addReg(Is24Bit ? Z80::SPL : Z80::SPS)->addRegisterDead(Z80::F, TRI);
     FPOffset = 0;
   }
   BuildStackAdjustment(MF, MBB, MI, DL, ScratchReg, StackSize, FPOffset);
@@ -252,7 +252,7 @@ void Z80FrameLowering::emitEpilogue(MachineFunction &MF,
       StackSize += SlotSize;
     } else if (Opc == Z80::LD24SP || Opc == Z80::LD16SP) {
       bool Is24Bit = Opc == Z80::LD24SP;
-      unsigned Reg = PI->getOperand(0).getReg();
+      unsigned Reg = PI->getOperand(1).getReg();
       if (PI == MBB.begin())
         break;
       MachineBasicBlock::iterator AI = std::prev(PI);

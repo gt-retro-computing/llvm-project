@@ -103,8 +103,10 @@ def X16 : Z80RC16<(add IX, O16)>;
 def I16 : Z80RC16<(add IY, IX)>;
 def A16 : Z80RC16<(add HL, I16)>;
 def R16 : Z80RC16<(add G16, I16)>;
-let CopyCost = -1 in
-def Z16 : Z80RC16<(add SPS, AF)>;
+let CopyCost = -1 in {
+    def SP16: Z80RC16<(add SPS)>;
+    def Z16 : Z80RC16<(add SPS, AF)>;
+}
 //def S16 : Z80RC16<(add R16, AF)>;
 //def L16 : Z80RC16<(add G16, I16)>;
 //def R16 : Z80RC16<(add L16, SPS)>;
@@ -118,8 +120,10 @@ def X24 : Z80RC24<(add UIX, O24)>;
 def I24 : Z80RC24<(add UIY, UIX)>;
 def A24 : Z80RC24<(add UHL, I24)>;
 def R24 : Z80RC24<(add G24, I24)>;
-let CopyCost = -1 in
-def Z24 : Z80RC24<(add SPL, PC)>;
+let CopyCost = -1 in {
+    def SP24: Z80RC24<(add SPL)>;
+    def Z24 : Z80RC24<(add SPL, PC)>;
+}
 //def S24 : Z80RC24<(add R24, AF)>;
 //def L24 : Z80RC24<(add G24, I24)>;
 //def R24 : Z80RC24<(add L24, SPL)>;

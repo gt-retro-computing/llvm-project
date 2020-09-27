@@ -187,8 +187,6 @@ bool Z80TargetInfo::
 initFeatureMap(llvm::StringMap<bool> &Features,
                DiagnosticsEngine &Diags, StringRef CPU,
                const std::vector<std::string> &FeaturesVec) const {
-  if (CPU == "z80")
-    Features["undoc"] = true;
   if (CPU == "z180")
     Features["z180"] = true;
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

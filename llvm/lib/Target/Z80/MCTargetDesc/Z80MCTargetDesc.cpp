@@ -16,6 +16,7 @@
 #include "Z80InstPrinter.h"
 #include "Z80MCAsmInfo.h"
 #include "Z80TargetStreamer.h"
+#include "Z80InstrInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -30,6 +31,7 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "Z80GenSubtargetInfo.inc"
+
 
 std::string Z80_MC::ParseZ80Triple(const Triple &TT) {
   std::string FS;
@@ -72,6 +74,12 @@ static MCInstPrinter *createZ80MCInstPrinter(const Triple &T,
   return nullptr;
 }
 
+static MCInstrInfo *createZ80MCInstInfo() {
+  MCInstrInfo *X = new MCInstrInfo();
+  InitZ80MCInstrInfo(X);
+  return X;
+}
+
 static MCTargetStreamer *
 createZ80AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
                            MCInstPrinter */*InstPrint*/,
@@ -79,20 +87,46 @@ createZ80AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new Z80TargetAsmStreamer(S, OS);
 }
 
+static MCRegisterInfo *createZ80MCRegisterInfo(const Triple &TT) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitZ80MCRegisterInfo(X, 0);
+  return X;
+}
+
+static MCStreamer *createZ80ELFStreamer(const Triple &T, MCContext &Ctx,
+                                        std::unique_ptr<MCAsmBackend> &&TAB,
+                                        std::unique_ptr<MCObjectWriter> &&OW,
+                                        std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+  return createELFStreamer(Ctx, std::move(TAB), std::move(OW), std::move(Emitter), RelaxAll);
+}
+
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeZ80TargetMC() {
   for (Target *T : {&getTheZ80Target(), &getTheEZ80Target()}) {
     // Register the MC asm info.
-    RegisterMCAsmInfoFn X(*T, createZ80MCAsmInfo);
+//    RegisterMCAsmInfoFn X(*T, createZ80MCAsmInfo);
+    TargetRegistry::RegisterMCAsmInfo(*T, createZ80MCAsmInfo);
+
+    // Register the MC instruction info.
+    TargetRegistry::RegisterMCInstrInfo(*T, createZ80MCInstInfo);
 
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T,
                                             Z80_MC::createZ80MCSubtargetInfo);
 
+    // Register MCRegInfo
+    TargetRegistry::RegisterMCRegInfo(*T, createZ80MCRegisterInfo);
+
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createZ80MCInstPrinter);
 
+    TargetRegistry::RegisterMCAsmBackend(*T, createZ80AsmBackend);
+
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createZ80AsmTargetStreamer);
+
+    TargetRegistry::RegisterELFStreamer(*T, createZ80ELFStreamer);
+
+    TargetRegistry::RegisterMCCodeEmitter(*T,createZ80MCCodeEmitter);
   }
 }

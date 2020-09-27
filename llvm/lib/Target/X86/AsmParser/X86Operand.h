@@ -33,7 +33,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   SMLoc OffsetOfLoc;
   StringRef SymName;
   void *OpDecl;
-  bool AddressOf;
+  bool AddressOf
   bool CallOperand;
 
   struct TokOp {

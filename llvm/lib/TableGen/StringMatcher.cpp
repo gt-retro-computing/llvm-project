@@ -54,8 +54,12 @@ bool StringMatcher::EmitStringMatcherForChar(
   // If we have verified that the entire string matches, we're done: output the
   // matching code.
   if (CharNo == Matches[0]->first.size()) {
-    if (Matches.size() > 1 && !IgnoreDuplicates)
+    if (Matches.size() > 1 && !IgnoreDuplicates) {
+      for(const auto *c : Matches) {
+        fprintf(stderr, "<%s, %s>\n", c->first.c_str(), c->second.c_str());
+      }
       report_fatal_error("Had duplicate keys to match on");
+    }
 
     // If the to-execute code has \n's in it, indent each subsequent line.
     StringRef Code = Matches[0]->second;

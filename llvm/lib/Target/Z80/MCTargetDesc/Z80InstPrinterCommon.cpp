@@ -82,29 +82,36 @@ void Z80InstPrinterCommon::printCCOperand(const MCInst *MI, unsigned Op,
 
 void Z80InstPrinterCommon::printMem(const MCInst *MI, unsigned Op,
                                     raw_ostream &OS) {
-  OS << markup("<mem:") << '(';
+  OS << markup("<Mem:");
   printOperand(MI, Op, OS);
-  OS << ')' << markup(">");
+  OS << markup(">");
   ;
 }
 void Z80InstPrinterCommon::printPtr(const MCInst *MI, unsigned Op,
                                     raw_ostream &OS) {
-  OS << markup("<mem:") << '(';
+  OS << markup("<Ptr:");
   printOperand(MI, Op, OS);
-  OS << ')' << markup(">");
+  OS << markup(">");
 }
 void Z80InstPrinterCommon::printOff(const MCInst *MI, unsigned Op,
                                     raw_ostream &OS) {
-  OS << markup("<mem:") << '(';
+  OS << markup("<Off:");
   printAddr(MI, Op, OS);
-  OS << ')' << markup(">");
+  OS << markup(">");
 }
 void Z80InstPrinterCommon::printAddr(const MCInst *MI, unsigned Op,
                                      raw_ostream &OS) {
   printOperand(MI, Op, OS);
-  auto Off = MI->getOperand(Op + 1).getImm();
-  assert(isInt<8>(Off) && "Offset out of range!");
-  OS << " + " << int(int8_t(Off));
+  auto Off = MI->getOperand(Op + 1);
+  if (Off.isExpr()) {
+    Off.getExpr()->print(OS, &MAI);
+  } else if (Off.isImm()) {
+    assert(isInt<8>(Off.getImm()) && "Offset out of range!");
+    if (Off.getImm() >= 0) {
+      OS << "+";
+    }
+    OS << int(int8_t(Off.getImm()));
+  }
 }
 void Z80InstPrinterCommon::printBit(const MCInst *MI, unsigned Op,
                                      raw_ostream &OS) {

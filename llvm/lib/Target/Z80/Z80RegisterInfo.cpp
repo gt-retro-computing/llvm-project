@@ -333,10 +333,15 @@ void Z80RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     if (SaveFlags)
       BuildMI(MBB, II, DL, TII.get(Is24Bit ? Z80::POP24AF : Z80::POP16AF));
     if (Opc == Z80::PEA24o || Opc == Z80::PEA16o) {
+      assert(MI.getNumOperands() == 2);
       MI.setDesc(TII.get(Opc == Z80::PEA24o ? Z80::EX24SP : Z80::EX16SP));
       MI.getOperand(0).ChangeToRegister(BasePtr, true);
       MI.getOperand(1).ChangeToRegister(BasePtr, false);
-      MI.tieOperands(0, 1);
+      MI.addOperand(MI.getOperand(1));
+      MI.getOperand(1).ChangeToRegister(Is24Bit ? Z80::SPL : Z80::SPS, true);
+      MI.addOperand(MachineOperand::CreateReg(Is24Bit ? Z80::SPL : Z80::SPS, false));
+      MI.tieOperands(0, 2);
+      MI.tieOperands(1, 3);
     } else {
       MI.getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);

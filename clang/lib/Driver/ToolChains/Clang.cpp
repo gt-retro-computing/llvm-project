@@ -4672,7 +4672,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Decide whether to use verbose asm. Verbose assembly is the default on
   // toolchains which have the integrated assembler on by default.
-  bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();
+  bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault() || true;
   if (!Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
                     IsIntegratedAssemblerDefault))
     CmdArgs.push_back("-fno-verbose-asm");

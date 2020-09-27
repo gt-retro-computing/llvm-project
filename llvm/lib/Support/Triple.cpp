@@ -743,7 +743,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
 
   case Triple::z80:
   case Triple::ez80:
-      return Triple::OMF;
+      return Triple::ELF;
   }
   llvm_unreachable("unknown architecture");
 }

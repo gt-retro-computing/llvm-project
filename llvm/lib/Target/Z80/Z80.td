@@ -46,7 +46,7 @@ let CompleteModel = 0 in def GenericModel : SchedMachineModel;
 class Proc<string Name, list<SubtargetFeature> Features>
   : ProcessorModel<Name, GenericModel, Features>;
 def : Proc<"generic",     []>;
-def : Proc<"z80",         [FeatureUndoc, FeatureIdxHalf]>;
+def : Proc<"z80",         []>;
 def : Proc<"z180",        [FeatureZ180]>;
 def : Proc<"ez80",        [FeatureZ180, FeatureEZ80, FeatureIdxHalf]>;
 
@@ -76,9 +76,9 @@ include "Z80CallingConv.td"
 // Assembly writer
 //===----------------------------------------------------------------------===//
 
-let ShouldEmitMatchRegisterName = 0 in {
-  def Z80AsmParser : AsmParser;
+let AllowDuplicateRegisterNames = 1 in {
   def EZ80AsmParser : AsmParser;
+  def Z80AsmParser : AsmParser;
 }
 def Z80AsmWriter : AsmWriter;
 def EZ80AsmWriter : AsmWriter {
