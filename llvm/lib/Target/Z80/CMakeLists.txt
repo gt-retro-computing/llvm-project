@@ -36,6 +36,7 @@ set(sources
   Z80RegisterInfo.cpp
   Z80Subtarget.cpp
   Z80TargetMachine.cpp
+        Z80ExpandPseudoInst.cpp
   )
 
 add_llvm_target(Z80CodeGen ${sources})

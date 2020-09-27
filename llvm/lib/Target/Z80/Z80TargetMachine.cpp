@@ -42,6 +42,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeZ80Target() {
   initializeZ80PostLegalizerCombinerPass(PR);
   initializeZ80PostSelectCombinerPass(PR);
   initializeZ80MachineLateOptimizationPass(PR);
+  initializeZ80ExpandPseudoInstPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -149,6 +150,9 @@ public:
   void addMachineLateOptimization() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
+
+protected:
+  void addPreEmitPass2() override;
 };
 } // end anonymous namespace
 
@@ -204,6 +208,10 @@ void Z80PassConfig::addFastRegAlloc() {
 
 void Z80PassConfig::addMachineLateOptimization() {
   addPass(createZ80MachineLateOptimizationPass());
+}
+
+void Z80PassConfig::addPreEmitPass2() {
+  addPass(createZ80ExpandPseudoInstPass());
 }
 
 std::unique_ptr<CSEConfigBase> Z80PassConfig::getCSEConfig() const {

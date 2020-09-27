@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Z80.h"
 #include "Z80InstrInfo.h"
 #include "MCTargetDesc/Z80MCTargetDesc.h"
-#include "Z80.h"
 #include "Z80Subtarget.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
