@@ -34,15 +34,17 @@ bool Z80ExpandPseudoInst::runOnMachineFunction(MachineFunction &MF) {
   auto const *II = MF.getTarget().getMCInstrInfo();
   assert(II);
 
+  auto Is24BitMode = !MF.getTarget().getTargetTriple().isArch16Bit() && MF.getTarget().getTargetTriple().getEnvironment() != Triple::CODE16;
+
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       switch (MI.getOpcode()) {
       case Z80::JQ:
-        MI.setDesc(II->get(Z80::JP16));
+        MI.setDesc(II->get(Is24BitMode ? Z80::JP24 : Z80::JP16));
         Changed = true;
         break;
       case Z80::JQCC:
-        MI.setDesc(II->get(Z80::JP16CC));
+        MI.setDesc(II->get(Is24BitMode ? Z80::JP24CC : Z80::JP16CC));
         Changed = true;
       }
     }
