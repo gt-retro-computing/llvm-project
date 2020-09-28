@@ -16,7 +16,7 @@
 #include "llvm/ADT/Triple.h"
 using namespace llvm;
 
-void Z80MCAsmInfo::anchor() { }
+void Z80MCAsmInfo::anchor() {}
 
 Z80MCAsmInfo::Z80MCAsmInfo(const Triple &T) {
   bool Is16Bit = T.isArch16Bit() || T.getEnvironment() == Triple::CODE16;
@@ -24,13 +24,13 @@ Z80MCAsmInfo::Z80MCAsmInfo(const Triple &T) {
   MaxInstLength = 6;
   DollarIsPC = true;
   CommentString = ";";
-  PrivateGlobalPrefix = PrivateLabelPrefix = "";
-//  Code16Directive = "assume\tadl = 0";
-//  Code24Directive = "assume\tadl = 1";
-  Code32Directive = Code64Directive = nullptr;
+
+  PrivateGlobalPrefix = "_g";
+  PrivateLabelPrefix = "_p";
+  LinkerPrivateGlobalPrefix = "lp_";
+  IsLittleEndian = true;
   AssemblerDialect = !Is16Bit;
   SupportsQuotedNames = false;
-  ZeroDirective = AsciiDirective = AscizDirective = nullptr;
   BlockSeparator = " dup ";
   Data8bitsDirective = "\tdb\t";
   Data16bitsDirective = "\tdw\t";
@@ -48,6 +48,8 @@ Z80MCAsmInfo::Z80MCAsmInfo(const Triple &T) {
   HasSingleParameterDotFile = false;
   DwarfFileDirective = "\tfile\t";
   DwarfLocDirective = "\tloc\t";
+  NeedsLocalForSize = false;
+  HasIdentDirective = false;
 
   // Debug Information
   SupportsDebugInformation = true;
@@ -58,10 +60,15 @@ Z80MCAsmInfo::Z80MCAsmInfo(const Triple &T) {
 
 const char *Z80MCAsmInfo::getBlockDirective(int64_t Size) const {
   switch (Size) {
-  default: return nullptr;
-  case 1: return "\tdb\t";
-  case 2: return "\tdw\t";
-  case 3: return "\tdl\t";
-  case 4: return "\tdd\t";
+  default:
+    return nullptr;
+  case 1:
+    return "\tdb\t";
+  case 2:
+    return "\tdw\t";
+  case 3:
+    return "\tdl\t";
+  case 4:
+    return "\tdd\t";
   }
 }

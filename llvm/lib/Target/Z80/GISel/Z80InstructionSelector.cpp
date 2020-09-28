@@ -1409,6 +1409,7 @@ bool Z80InstructionSelector::selectSelect(MachineInstr &I,
   default:
     return false;
   }
+  (void)RC;
 
   MachineIRBuilder MIB(I);
   Z80::CondCode CC = foldCond(I.getOperand(1).getReg(), MIB, MRI);

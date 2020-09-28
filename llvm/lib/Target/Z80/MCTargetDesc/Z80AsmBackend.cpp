@@ -12,6 +12,7 @@
 //
 
 #include "Z80AsmBackend.h"
+#include "Z80FixupKinds.h"
 #include "Z80MCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -34,8 +35,15 @@ using namespace llvm;
 // Prepare value for the target space for it
 static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-
-  return 0;
+  switch (static_cast<Z80::Fixups>(Fixup.getKind())) {
+  default:
+    llvm_unreachable("Unsupported Fixup");
+  case Z80::fixup_z80_addr16_b2:
+    if (!isUInt<16>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range of u16");
+    return Value & 0xFFFF;
+  }
+  return Value;
 }
 
 std::unique_ptr<MCObjectTargetWriter>
@@ -47,20 +55,48 @@ Z80AsmBackend::createObjectTargetWriter() const {
 /// data fragment, at the offset specified by the fixup and following the
 /// fixup kind as appropriate.
 void Z80AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                                const MCValue &Target,
-                                MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved,
-                                const MCSubtargetInfo *STI) const {
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsResolved,
+                               const MCSubtargetInfo *STI) const {
+  auto &Ctx = Asm.getContext();
+  auto Info = getFixupKindInfo(Fixup.getKind());
 
+  Value = adjustFixupValue(Fixup, Value, Ctx);
+  if (Value == 0)
+    return; // Since we substitute zero anyways.
+
+  Value <<= Info.TargetOffset;
+
+  auto OffsetInInstruction = Info.TargetOffset;
+  auto FixupSize = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
+
+  auto InstructionOffset = Fixup.getOffset();
+
+  assert(InstructionOffset + FixupSize <= Data.size() && "Invalid fixup offset!");
+
+  for (unsigned i = 0; i != FixupSize; ++i) {
+    Data[InstructionOffset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+  }
 }
 
-Optional<MCFixupKind> Z80AsmBackend::getFixupKind(StringRef Name) const {
-  return MCAsmBackend::getFixupKind(Name);
-}
+const MCFixupKindInfo &Z80AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[] = {
+      // This table *must* be in the order that the fixup_* kinds are defined in
+      // Z80FixupKinds.h.
+      //
+      // name                      offset  bits  flags
+      { "fixup_z80_addr16_b2",  8,     16,  0 },
+  };
+  static_assert((array_lengthof(Infos)) == Z80::NumTargetFixupKinds,
+                "Not all fixup kinds added to Infos array");
 
-const MCFixupKindInfo &Z80AsmBackend::
-getFixupKindInfo(MCFixupKind Kind) const {
-    llvm_unreachable("unknown fixup");
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+             "Invalid kind!");
+  return Infos[Kind - FirstTargetFixupKind];
 }
 
 /// WriteNopData - Write an (optimal) nop sequence of Count bytes
@@ -69,26 +105,17 @@ getFixupKindInfo(MCFixupKind Kind) const {
 ///
 /// \return - True on success.
 bool Z80AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-  // Check for a less than instruction size number of bytes
-  // FIXME: 16 bit instructions are not handled yet here.
-  // We shouldn't be using a hard coded number for instruction size.
-
-  // If the count is not 4-byte aligned, we must be writing data into the text
-  // section (otherwise we have unaligned instructions, and thus have far
-  // bigger problems), so just write zeros instead.
   OS.write_zeros(Count);
   return true;
 }
 
-bool Z80AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
-                                           const MCValue &Target) {
-  return false;
+unsigned Z80AsmBackend::getNumFixupKinds() const {
+  return Z80::Fixups::NumTargetFixupKinds;
 }
 
 MCAsmBackend *llvm::createZ80AsmBackend(const Target &T,
-                                         const MCSubtargetInfo &STI,
-                                         const MCRegisterInfo &MRI,
-                                         const MCTargetOptions &Options) {
+                                        const MCSubtargetInfo &STI,
+                                        const MCRegisterInfo &MRI,
+                                        const MCTargetOptions &Options) {
   return new Z80AsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU());
 }

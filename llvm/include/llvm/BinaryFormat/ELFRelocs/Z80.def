@@ -1,0 +1,7 @@
+
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_Z80_NONE,                0)
+ELF_RELOC(R_Z80_ADDR16_B2,           1)

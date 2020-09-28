@@ -785,6 +785,10 @@ enum : unsigned {
   EF_Z80_EZ80 = 0x1,
 };
 
+enum {
+#include "ELFRelocs/Z80.def"
+};
+
 #undef ELF_RELOC
 
 // Section header.
@@ -1279,7 +1283,7 @@ enum {
 enum {
   DF_ORIGIN = 0x01,    // The object may reference $ORIGIN.
   DF_SYMBOLIC = 0x02,  // Search the shared lib before searching the exe.
-  DF_TEXTREL = 0x04,   // Relocations may modify a non-writable segment.
+  DF_TEXTREL = 0x04,   // Relocations may modify a non-writable segment
   DF_BIND_NOW = 0x08,  // Process all relocations on load.
   DF_STATIC_TLS = 0x10 // Reject attempts to load dynamically.
 };

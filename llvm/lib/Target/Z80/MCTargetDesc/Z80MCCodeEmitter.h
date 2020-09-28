@@ -50,7 +50,8 @@ public:
                          const MCSubtargetInfo &STI) const override;
   void emitZ80Prefix(const MCInst &MI, const MCInstrDesc &MIDesc,
                      unsigned int &CurByte, raw_ostream &OS) const;
-  void emitImmediate(const MCInst &MI, unsigned &CurByte, raw_ostream &OS) const;
+  void emitImmediate(const MCInst &MI, unsigned &CurByte, raw_ostream &OS,
+                     SmallVectorImpl<MCFixup> &Fixups) const;
 
   void patchCC(const MCInst &MI, uint8_t &PrimaryOpcode) const;
   void patchRegister(const MCInst &MI, uint8_t &PrimaryOpcode) const;

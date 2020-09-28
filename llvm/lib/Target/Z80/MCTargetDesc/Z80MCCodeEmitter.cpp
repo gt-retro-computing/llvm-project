@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Z80MCCodeEmitter.h"
+#include "MCTargetDesc/Z80FixupKinds.h"
 #include "MCTargetDesc/Z80MCTargetDesc.h"
 #include "Z80InstrInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
@@ -30,9 +32,12 @@
 #include <cassert>
 #include <cstdint>
 
-using namespace llvm;
-
 #define DEBUG_TYPE "mccodeemitter"
+
+STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
+STATISTIC(MCNumFixups, "Number of MC fixups created");
+
+using namespace llvm;
 
 #define GET_INSTRMAP_INFO
 #include "Z80GenInstrInfo.inc"
@@ -107,7 +112,8 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
 
   switch (OpCode) {
   case Z80::SBC16ao:
-    EmitEDPrefix = true; break;
+    EmitEDPrefix = true;
+    break;
   default:
     break;
   }
@@ -123,7 +129,7 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::ADD16ao:
     case Z80::DEC16r:
     case Z80::EX16SP: // EX (sp), HL/IX/IY Operands: [SP, rp, SP, rp]
-    case Z80::LD8og: // LD (IX/IY + n), r Operands: [IX/IY, n, r]
+    case Z80::LD8og:  // LD (IX/IY + n), r Operands: [IX/IY, n, r]
       Reg = MI.getOperand(0).getReg();
       break;
     case Z80::LD8go:
@@ -169,7 +175,13 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
                                      uint8_t &PrimaryOpcode) const {
   auto Opcode = MI.getOpcode();
 
-  enum class RegPatch { R8_DST, R8_SRC, R16, R8_8, NoPatch } PatchType = RegPatch::NoPatch;
+  enum class RegPatch {
+    R8_DST,
+    R8_SRC,
+    R16,
+    R8_8,
+    NoPatch
+  } PatchType = RegPatch::NoPatch;
   unsigned Reg = 0;
   unsigned Reg2 = 0;
 
@@ -231,7 +243,8 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
 }
 
 void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
-                                     raw_ostream &OS) const {
+                                     raw_ostream &OS,
+                                     SmallVectorImpl<MCFixup> &Fixups) const {
   auto &MIDesc = MCII.get(MI.getOpcode());
   auto TS = MIDesc.TSFlags;
 
@@ -279,6 +292,29 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
         emitWordLE(0, CurByte, OS);
       else
         emitByte(0, CurByte, OS);
+
+      // Emit Fixups for Expr
+      const MCExpr *Expr = ImmOp.getExpr();
+      MCExpr::ExprKind Kind = Expr->getKind();
+      Z80::Fixups FixupKind = Z80::fixup_z80_invalid;
+      bool RelaxCandidate = false;
+      if (Kind == MCExpr::Target) {
+        llvm_unreachable("todo, support MCExpr::Target");
+      } else if (Kind == MCExpr::SymbolRef &&
+                 cast<MCSymbolRefExpr>(Expr)->getKind() ==
+                     MCSymbolRefExpr::VK_None) {
+        if (Opcode == Z80::JP16CC || Opcode == Z80::JP16 ||
+            Opcode == Z80::CALL16 || Opcode == Z80::CALL16CC) {
+          FixupKind = Z80::fixup_z80_addr16_b2;
+        }
+      }
+
+      assert(FixupKind != Z80::fixup_z80_invalid && "Unhandled expression!");
+
+      Fixups.push_back(
+          MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+      ++MCNumFixups;
+
     } else {
       llvm_unreachable("HasImm but got neither imm nor expr");
     }
@@ -306,7 +342,7 @@ void Z80MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   emitByte(PrimaryOpcode, CurrentByte, OS);
 
   // Immediate Suffix
-  emitImmediate(MI, CurrentByte, OS);
+  emitImmediate(MI, CurrentByte, OS, Fixups);
 
   // TODO Needfuls
 }
