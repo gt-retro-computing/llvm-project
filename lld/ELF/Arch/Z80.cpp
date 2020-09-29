@@ -51,6 +51,10 @@ void Z80::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const{
     checkIntUInt(loc, val, 16, rel);
     write16le(loc + 1, val & 0xFFFF);
     break;
+  case R_Z80_ADDR16_B3:
+    checkIntUInt(loc, val, 16, rel);
+    write16le(loc + 2, val & 0xFFFF);
+    break;
   default:
     error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
   }

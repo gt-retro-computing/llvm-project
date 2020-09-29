@@ -41,7 +41,7 @@ public:
 
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 };
-}
+} // namespace
 
 Z80MCInstLower::Z80MCInstLower(const MachineFunction &MF, Z80AsmPrinter &AP)
     : Ctx(MF.getContext()), AsmPrinter(AP) {}

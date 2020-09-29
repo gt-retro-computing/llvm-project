@@ -5,3 +5,4 @@
 
 ELF_RELOC(R_Z80_NONE,                0)
 ELF_RELOC(R_Z80_ADDR16_B2,           1)
+ELF_RELOC(R_Z80_ADDR16_B3,           2)

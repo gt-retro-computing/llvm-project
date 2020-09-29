@@ -106,14 +106,17 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
   auto TS = MIDesc.TSFlags;
 
   // DD Prefix
+  bool EmitCBPrefix = false;
   bool EmitDDPrefix = false;
-  bool EmitFDPrefix = false;
   bool EmitEDPrefix = false;
+  bool EmitFDPrefix = false;
 
   switch (OpCode) {
   case Z80::SBC16ao:
     EmitEDPrefix = true;
     break;
+  case Z80::BIT8bg:
+    EmitCBPrefix = true;
   default:
     break;
   }
@@ -130,13 +133,19 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::DEC16r:
     case Z80::EX16SP: // EX (sp), HL/IX/IY Operands: [SP, rp, SP, rp]
     case Z80::LD8og:  // LD (IX/IY + n), r Operands: [IX/IY, n, r]
+    case Z80::LD8ri:  // LD r, n   Operands: [IXhl/IYhl/r8, n]
+    case Z80::LD16am:
+    case Z80::LD16om:
+    case Z80::INC16r:
       Reg = MI.getOperand(0).getReg();
       break;
     case Z80::LD8go:
     case Z80::LD16SP: // LD sp, IX/IY/HL Operands: [SP, rp]
       Reg = MI.getOperand(1).getReg();
       break;
+    // Not IX IY Cases
     case Z80::SBC16ao:
+    case Z80::BIT8bg:
       break;
     default:
       MI.dump();
@@ -158,6 +167,9 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
 
   if (EmitEDPrefix)
     emitByte(0xED, CurByte, OS);
+
+  if (EmitCBPrefix)
+    emitByte(0xCB, CurByte, OS);
 }
 
 void Z80MCCodeEmitter::patchCC(const MCInst &MI, uint8_t &PrimaryOpcode) const {
@@ -190,6 +202,7 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
   case Z80::POP16r:
   case Z80::LD16ri:
   case Z80::DEC16r:
+  case Z80::INC16r:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(0).getReg());
     PatchType = RegPatch::R16;
     break;
@@ -200,10 +213,17 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
     break;
     // 8 Bit Register Patches
   case Z80::LD8go:
+  case Z80::LD8ri:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(0).getReg());
     PatchType = RegPatch::R8_DST;
     break;
   case Z80::OR8ar:
+  case Z80::XOR8ar:
+  case Z80::AND8ar:
+  case Z80::ADD8ar:
+  case Z80::SUB8ar:
+  case Z80::SBC8ar:
+  case Z80::ADC8ar:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(0).getReg());
     PatchType = RegPatch::R8_SRC;
     break;
@@ -215,6 +235,12 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
   case Z80::LD8og:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(2).getReg());
     PatchType = RegPatch::R8_SRC;
+    break;
+  // Bit Operations
+  case Z80::BIT8bg: // bit imm, G8
+    Reg = MI.getOperand(0).getImm();
+    Reg2 = getZ80RegisterEncoding(MI, MI.getOperand(1).getReg());
+    PatchType = RegPatch::R8_8;
     break;
   }
 
@@ -255,26 +281,41 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
 
   assert(MI.getNumOperands() > 0);
   auto ImmOp = MI.getOperand(0);
-  bool Is16Bit = true;
+  bool Is16Bit = false;
 
   if (TS & Z80II::HasImm || TS & Z80II::HasOff) {
     switch (Opcode) {
     case Z80::JP16:
     case Z80::JP16CC:
+    case Z80::CALL16:
       Is16Bit = true;
       // Default Operand 0
       break;
     case Z80::LD16ri:
+    case Z80::LD16am:
+    case Z80::LD16om:
       Is16Bit = true;
       ImmOp = MI.getOperand(1);
       break;
+
+    // 8 Bit Offsets
+    case Z80::OUTia:
+    case Z80::INai:
+    case Z80::AND8ai:
+    case Z80::OR8ai:
+    case Z80::XOR8ai:
+    case Z80::SUB8ai:
+    case Z80::ADC8ai:
+    case Z80::ADD8ai:
+    case Z80::SBC8ai:
+      // Default Operand 0
+      break;
     case Z80::LD8go:
       ImmOp = MI.getOperand(2);
-      Is16Bit = false;
       break;
     case Z80::LD8og:
+    case Z80::LD8ri:
       ImmOp = MI.getOperand(1);
-      Is16Bit = false;
       break;
     default:
       MI.dump();
@@ -306,6 +347,12 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
         if (Opcode == Z80::JP16CC || Opcode == Z80::JP16 ||
             Opcode == Z80::CALL16 || Opcode == Z80::CALL16CC) {
           FixupKind = Z80::fixup_z80_addr16_b2;
+        } else if (Opcode == Z80::LD16am || Opcode == Z80::LD16om) {
+          if (MI.getOperand(0).getReg() != Z80::IY && MI.getOperand(0).getReg() != Z80::IX) {
+            FixupKind = Z80::fixup_z80_addr16_b2;
+          } else {
+            FixupKind = Z80::fixup_z80_addr16_b3;
+          }
         }
       }
 
@@ -346,6 +393,8 @@ void Z80MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
   // TODO Needfuls
 }
+
+
 
 MCCodeEmitter *createZ80MCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,

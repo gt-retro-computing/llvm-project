@@ -73,7 +73,8 @@ void Z80AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   auto InstructionOffset = Fixup.getOffset();
 
-  assert(InstructionOffset + FixupSize <= Data.size() && "Invalid fixup offset!");
+  assert(InstructionOffset + FixupSize <= Data.size() &&
+         "Invalid fixup offset!");
 
   for (unsigned i = 0; i != FixupSize; ++i) {
     Data[InstructionOffset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
@@ -86,7 +87,8 @@ const MCFixupKindInfo &Z80AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // Z80FixupKinds.h.
       //
       // name                      offset  bits  flags
-      { "fixup_z80_addr16_b2",  8,     16,  0 },
+      {"fixup_z80_addr16_b2", 8, 16, 0},
+      {"fixup_z80_addr16_b3", 16, 16, 0}
   };
   static_assert((array_lengthof(Infos)) == Z80::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -95,7 +97,7 @@ const MCFixupKindInfo &Z80AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
     return MCAsmBackend::getFixupKindInfo(Kind);
 
   assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-             "Invalid kind!");
+         "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
 

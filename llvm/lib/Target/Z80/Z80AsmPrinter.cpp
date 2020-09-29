@@ -24,6 +24,9 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+
+#define DEBUG_TYPE "z80-asm-printer"
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -53,16 +56,19 @@ void Z80AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
 }
 
 void Z80AsmPrinter::emitEndOfAsmFile(Module &M) {
-//  Z80TargetStreamer *TS =
-//      static_cast<Z80TargetStreamer *>(OutStreamer->getTargetStreamer());
-//  for (const auto &Symbol : OutContext.getSymbols())
-//    if (!Symbol.second->isDefined())
-//      TS->emitExtern(Symbol.second);
+  Z80TargetStreamer *TS =
+      static_cast<Z80TargetStreamer *>(OutStreamer->getTargetStreamer());
+  if (!TS) return AsmPrinter::emitEndOfAsmFile(M);
+  for (const auto &Symbol : OutContext.getSymbols())
+    if (!Symbol.second->isDefined())
+      TS->emitExtern(Symbol.second);
 }
 
 void Z80AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   Z80TargetStreamer *TS =
       static_cast<Z80TargetStreamer *>(OutStreamer->getTargetStreamer());
+  if (!TS)
+    return AsmPrinter::emitGlobalVariable(GV);
   const DataLayout &DL = GV->getParent()->getDataLayout();
 
   if (GV->hasInitializer()) {
@@ -114,7 +120,7 @@ void Z80AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNum,
     Register Reg = MO.getReg();
     assert(Register::isPhysicalRegister(Reg));
     assert(!MO.getSubReg() && "Subregs should be eliminated!");
-    dbgs() << SubRegIdx << '\n';
+    LLVM_DEBUG(dbgs() << SubRegIdx << '\n');
     if (SubRegIdx)
       if (Register SubReg =
               getSubtarget().getRegisterInfo()->getSubReg(Reg, SubRegIdx))

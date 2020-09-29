@@ -24,6 +24,8 @@ unsigned int Z80ELFObjectWriter::getRelocType(MCContext &Ctx,
     llvm_unreachable("invalid fixup kind!");
   case Z80::fixup_z80_addr16_b2:
     return ELF::R_Z80_ADDR16_B2;
+  case Z80::fixup_z80_addr16_b3:
+    return ELF::R_Z80_ADDR16_B3;
   }
 
   return 0;

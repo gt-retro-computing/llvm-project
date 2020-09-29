@@ -72,7 +72,7 @@ void Z80Operand::print(raw_ostream &OS) const {
     OS << "Token: " << StringRef(this->Tok.Data, this->Tok.Length);
     break;
   case KindTy::Register:
-    OS << "Reg";
+    OS << "Reg:" << Z80::D;
     break;
   case KindTy::Immediate:
     OS << "Imm: " << this->Imm.Val;

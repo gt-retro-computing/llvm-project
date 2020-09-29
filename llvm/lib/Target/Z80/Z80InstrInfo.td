@@ -1065,6 +1065,16 @@ let Defs = [HL, C, B, F], Uses = [HL, C, B] in {
   let mayLoad = 1 in defm OUT : Block16<3, "out", "ot">;
 }
 
+let Uses = [A] in {
+  def OUTia : I8i<NoPre, 0xD3, "out", "\t (${port}), a",
+                  "",(outs), (ins i8imm:$port)>;
+}
+
+let Defs = [A] in {
+  def INai  : I8i<NoPre, 0xDB, "in", "\t a, (${port})",
+                  "", (outs), (ins i8imm:$port)>;
+}
+
 let Defs = [UDE, UHL, UBC, F], Uses = [UDE, UHL, UBC],
     mayLoad = 1, mayStore = 1 in
 defm LD : Block24<0, "ld">;
