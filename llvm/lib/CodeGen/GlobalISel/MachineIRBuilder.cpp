@@ -441,19 +441,52 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
   assert((TargetOpcode::G_ANYEXT == ExtOpc || TargetOpcode::G_ZEXT == ExtOpc ||
           TargetOpcode::G_SEXT == ExtOpc) &&
          "Expecting Extending Opc");
-  assert(Res.getLLTTy(*getMRI()).isScalar() ||
-         Res.getLLTTy(*getMRI()).isVector());
-  assert(Res.getLLTTy(*getMRI()).isScalar() ==
-         Op.getLLTTy(*getMRI()).isScalar());
+
+  const TargetRegisterInfo *TRI = getMRI()->getTargetRegisterInfo();
+
+  bool resIsScalar = false;
+  bool resIsVector = false;
+  bool resIsPhysical = false;
+  unsigned resSizeInBits = 0;
+  bool opIsScalar = false;
+  bool opIsVector = false;
+  bool opIsPhysical = false;
+  unsigned opSizeInBits = 0;
+
+  // TODO assumes reg is not a vector register.
+
+  if (Res.getDstOpKind() == DstOp::DstType::Ty_Reg) {
+    resIsScalar = true;
+    resIsPhysical = true;
+    resSizeInBits = TRI->getRegSizeInBits(Res.getReg(), *getMRI());
+  } else {
+    auto Llt = Res.getLLTTy(*getMRI());
+    resIsScalar = Llt.isScalar();
+    resIsVector = Llt.isVector();
+    resSizeInBits = Llt.getSizeInBits();
+  }
+
+  if (Op.getSrcOpKind() == SrcOp::SrcType::Ty_Reg) {
+    opIsScalar = true;
+    opIsPhysical = true;
+    opSizeInBits = TRI->getRegSizeInBits(Op.getReg(), *getMRI());
+  } else {
+    dbgs() << "res=" << Op.getReg().isVirtual() << "\n";
+    auto Llt = Op.getLLTTy(*getMRI());
+    opIsScalar = Llt.isScalar();
+    opIsVector = Llt.isVector();
+    opSizeInBits = Llt.getSizeInBits();
+  }
+
+  assert(resIsScalar || resIsVector);
+  assert(resIsScalar == opIsScalar);
 
   unsigned Opcode = TargetOpcode::COPY;
-  if (Res.getLLTTy(*getMRI()).getSizeInBits() >
-      Op.getLLTTy(*getMRI()).getSizeInBits())
+  if (resSizeInBits > opSizeInBits)
     Opcode = ExtOpc;
-  else if (Res.getLLTTy(*getMRI()).getSizeInBits() <
-           Op.getLLTTy(*getMRI()).getSizeInBits())
+  else if (resSizeInBits < opSizeInBits)
     Opcode = TargetOpcode::G_TRUNC;
-  else
+  else if (!resIsPhysical && !opIsPhysical)
     assert(Res.getLLTTy(*getMRI()) == Op.getLLTTy(*getMRI()));
 
   return buildInstr(Opcode, Res, Op);
