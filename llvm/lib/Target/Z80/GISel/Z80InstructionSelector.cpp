@@ -701,7 +701,7 @@ bool Z80InstructionSelector::selectLoadStore(MachineInstr &I,
     } else
       MOs.push_back(MachineOperand::CreateReg(PtrReg, false));
   }
-  bool IsOff = MOs.size() == 2;
+  bool IsOff = MOs.size() == 2;// FIXME: This might cause the LD8gp to select IX/IY as p (which needs LD8go)
   if (RMWOps.empty()) {
     Optional<int64_t> ValConst;
     switch (Ty.getSizeInBits()) {

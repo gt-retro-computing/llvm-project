@@ -471,7 +471,6 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
     opIsPhysical = true;
     opSizeInBits = TRI->getRegSizeInBits(Op.getReg(), *getMRI());
   } else {
-    dbgs() << "res=" << Op.getReg().isVirtual() << "\n";
     auto Llt = Op.getLLTTy(*getMRI());
     opIsScalar = Llt.isScalar();
     opIsVector = Llt.isVector();

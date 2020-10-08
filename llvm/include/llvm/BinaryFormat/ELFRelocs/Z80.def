@@ -4,5 +4,8 @@
 #endif
 
 ELF_RELOC(R_Z80_NONE,                0)
-ELF_RELOC(R_Z80_ADDR16_B2,           1)
-ELF_RELOC(R_Z80_ADDR16_B3,           2)
+ELF_RELOC(R_Z80_8,                   1)
+ELF_RELOC(R_Z80_16,                  2)
+ELF_RELOC(R_Z80_ADDR16_B2,           3)
+ELF_RELOC(R_Z80_ADDR16_B3,           4)
+ELF_RELOC(R_Z80_PCREL8_B2,           5)

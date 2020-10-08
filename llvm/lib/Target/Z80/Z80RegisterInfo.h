@@ -21,11 +21,15 @@
 
 namespace llvm {
 class Triple;
+class Z80Subtarget;
 
 class Z80RegisterInfo final : public Z80GenRegisterInfo {
   /// Is24bit - Is the target 24-bits.
   ///
   bool Is24Bit;
+
+  /// HasIdxHalfRegs - Do the registers IYL,IYH,IXL,IXH exist?
+  bool HasIdxHalfRegs;
 
   /// SlotSize - Stack slot size in bytes.
   ///
@@ -36,7 +40,7 @@ class Z80RegisterInfo final : public Z80GenRegisterInfo {
   unsigned StackPtr;
 
 public:
-  Z80RegisterInfo(const Triple &TT);
+  Z80RegisterInfo(Z80Subtarget &STI);
 
   /// Code Generation virtual methods...
   ///

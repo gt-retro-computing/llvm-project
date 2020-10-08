@@ -20,6 +20,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -35,10 +36,20 @@ using namespace llvm;
 // Prepare value for the target space for it
 static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (static_cast<Z80::Fixups>(Fixup.getKind())) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unsupported Fixup");
+  case Z80::fixup_z80_pcrel8_b2:
+//    if (!isInt<8>(((int64_t)Value) - 1))
+//      Ctx.reportError(Fixup.getLoc(), "PC Rel8 out of range");
+    return Value;
+  case FK_Data_1:
+    if (!isUInt<8>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range of u16");
+    return Value & 0xFF;
   case Z80::fixup_z80_addr16_b2:
+  case Z80::fixup_z80_addr16_b3:
+  case FK_Data_2:
     if (!isUInt<16>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range of u16");
     return Value & 0xFFFF;
@@ -88,7 +99,8 @@ const MCFixupKindInfo &Z80AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       //
       // name                      offset  bits  flags
       {"fixup_z80_addr16_b2", 8, 16, 0},
-      {"fixup_z80_addr16_b3", 16, 16, 0}
+      {"fixup_z80_addr16_b3", 16, 16, 0},
+      {"fixup_z80_pcrel8_b2", 8, 8, 0},
   };
   static_assert((array_lengthof(Infos)) == Z80::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");

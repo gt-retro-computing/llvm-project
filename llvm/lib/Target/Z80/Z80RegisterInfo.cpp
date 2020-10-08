@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "z80reginfo"
@@ -30,10 +31,14 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "Z80GenRegisterInfo.inc"
 
-Z80RegisterInfo::Z80RegisterInfo(const Triple &TT)
+Z80RegisterInfo::Z80RegisterInfo(Z80Subtarget &STI)
     : Z80GenRegisterInfo(Z80::PC) {
+
+  const Triple TT = STI.getTargetTriple();
+
   // Cache some information.
   Is24Bit = !TT.isArch16Bit() && TT.getEnvironment() != Triple::CODE16;
+  HasIdxHalfRegs = STI.hasIndexHalfRegs();
 
   // Use a callee-saved register as the base pointer.  These registers must
   // not conflict with any ABI requirements.
@@ -168,6 +173,14 @@ BitVector Z80RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     for (MCRegAliasIterator I(Reg, this, /*IncludeSelf=*/true); I.isValid();
          ++I)
       Reserved.set(*I);
+
+  // If index (IX/IY) half registers are not valid for this sub target,
+  // mark them reserved. ONLY the sub registers are reserved. IX and IY
+  // reservations are not affected by this code
+  if (!HasIdxHalfRegs) {
+    for (Register Reg : {Z80::IXH, Z80::IXL, Z80::IYH, Z80::IYL})
+      Reserved.set(Reg);
+  }
 
   return Reserved;
 }

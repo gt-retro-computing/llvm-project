@@ -31,15 +31,6 @@ Z80MCAsmInfo::Z80MCAsmInfo(const Triple &T) {
   IsLittleEndian = true;
   AssemblerDialect = !Is16Bit;
   SupportsQuotedNames = false;
-  BlockSeparator = " dup ";
-  Data8bitsDirective = "\tdb\t";
-  Data16bitsDirective = "\tdw\t";
-  Data24bitsDirective = "\tdl\t";
-  Data32bitsDirective = "\tdd\t";
-  Data64bitsDirective = nullptr;
-  AlwaysChangeSection = true;
-  SetDirective = "\tlabel\t";
-  SetSeparator = " at ";
   HasFunctionAlignment = false;
   HasDotTypeDotSizeDirective = false;
   WeakDirective = "\tweak\t";

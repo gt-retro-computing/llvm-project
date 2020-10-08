@@ -37,7 +37,7 @@ Z80InstrInfo::Z80InstrInfo(Z80Subtarget &STI)
                                      : Z80::ADJCALLSTACKDOWN16),
                       (STI.is24Bit() ? Z80::ADJCALLSTACKUP24
                                      : Z80::ADJCALLSTACKUP16)),
-      Subtarget(STI), RI(STI.getTargetTriple()) {
+      Subtarget(STI), RI(STI) {
 }
 
 int Z80InstrInfo::getSPAdjust(const MachineInstr &MI) const {
@@ -481,6 +481,7 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::POP24AF : Z80::POP16AF));
       }
     } else {
+      MBB.dump();
       assert(Subtarget.hasIndexHalfRegs() && "Need  index half registers");
       // Only one is an index register, which isn't directly possible if one of
       // them is from HL.  If so, surround with EX DE,HL and use DE instead.

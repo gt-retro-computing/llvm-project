@@ -41,10 +41,20 @@ Z80::Z80() {
 
 RelExpr Z80::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  return R_ABS;
+  switch (type) {
+  case R_Z80_PCREL8_B2:
+    return R_PC;
+  case R_Z80_8:
+  case R_Z80_16:
+  case R_Z80_ADDR16_B2:
+  case R_Z80_ADDR16_B3:
+    return R_ABS;
+  default:
+    llvm_unreachable("Undefined reloc type");
+  }
 }
 
-void Z80::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const{
+void Z80::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   auto type = rel.type;
   switch (type) {
   case R_Z80_ADDR16_B2:
@@ -55,6 +65,20 @@ void Z80::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const{
     checkIntUInt(loc, val, 16, rel);
     write16le(loc + 2, val & 0xFFFF);
     break;
+  case R_Z80_8:
+    checkIntUInt(loc, val, 8, rel);
+    *loc = (val & 0xFF);
+    break;
+  case R_Z80_16:
+    checkIntUInt(loc, val, 16, rel);
+    write16le(loc, val & 0xFFFF);
+    break;
+  case R_Z80_PCREL8_B2: {
+    int64_t fixed_val = ((int64_t)val - 2);
+    checkInt(loc, fixed_val, 8, rel);
+    *(loc + 1) = (uint8_t)fixed_val;
+    break;
+  }
   default:
     error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
   }

@@ -292,6 +292,7 @@ let hasSideEffects = 0 in
 def NOP : I<NoPre, 0x00, "nop">;
 def DI  : I<NoPre, 0xF3, "di">;
 def EI  : I<NoPre, 0xFB, "ei">;
+def HALT : I<NoPre, 0x76, "halt">;
 
 //===----------------------------------------------------------------------===//
 //  Control Flow Instructions.
@@ -391,6 +392,13 @@ let isBranch = 1, isTerminator = 1 in {
     def JP24CC : I24i<NoPre, 0xC2, "jp", "\t$cc, $tgt", "",
                       (outs), (ins jmptarget:$tgt, cc:$cc)>;
   }
+}
+
+let isBranch = 1, isTerminator = 1 in {
+    let Defs=[B, F], Uses=[B, F] in {
+        def DJNZ    : I8i<NoPre, 0x10, "djnz", "\t$tgt", "",
+                        (outs), (ins jmptargetoff:$tgt)>;
+    }
 }
 
 //===----------------------------------------------------------------------===//
@@ -852,12 +860,12 @@ multiclass BitOp8R<bits<2> opcode, string mnemonic> {
 }
 
 defm RLC : UnOp8RF  <CBPre, 0, "rlc">;
-defm RRC : UnOp8RF  <CBPre, 1, "rrc">;
-defm RL  : UnOp8RFF <CBPre, 2, "rl">;
-defm RR  : UnOp8RFF <CBPre, 3, "rr">;
-defm SLA : UnOp8RF  <CBPre, 4, "sla">;
-defm SRA : UnOp8RF  <CBPre, 5, "sra">;
-defm SRL : UnOp8RF  <CBPre, 7, "srl">;
+defm RRC : UnOp8RF  <CBPre, 0x8, "rrc">;
+defm RL  : UnOp8RFF <CBPre, 0x10, "rl">;
+defm RR  : UnOp8RFF <CBPre, 0x18, "rr">;
+defm SLA : UnOp8RF  <CBPre, 0x20, "sla">;
+defm SRA : UnOp8RF  <CBPre, 0x28, "sra">;
+defm SRL : UnOp8RF  <CBPre, 0x38, "srl">;
 defm BIT : BitOp8F  <       1, "bit">;
 defm RES : BitOp8R  <       2, "res">;
 defm SET : BitOp8R  <       3, "set">;
@@ -1070,10 +1078,18 @@ let Uses = [A] in {
                   "",(outs), (ins i8imm:$port)>;
 }
 
-let Defs = [A] in {
+let Uses = [C] in
+    def OUTcr : I<EDPre, 0x41, "out", "\t ( c ), $src",
+                "", (outs), (ins G8:$src)>;
+
+let Defs = [A] in
   def INai  : I8i<NoPre, 0xDB, "in", "\t a, (${port})",
                   "", (outs), (ins i8imm:$port)>;
-}
+
+let Defs = [F], Uses = [C] in
+    def INrc : I<EDPre, 0x40, "in", "\t $dst, ( c )",
+                    "", (outs G8:$dst), (ins)>;
+
 
 let Defs = [UDE, UHL, UBC, F], Uses = [UDE, UHL, UBC],
     mayLoad = 1, mayStore = 1 in
