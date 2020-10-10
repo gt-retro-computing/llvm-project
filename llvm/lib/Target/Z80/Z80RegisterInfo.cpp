@@ -177,10 +177,10 @@ BitVector Z80RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // If index (IX/IY) half registers are not valid for this sub target,
   // mark them reserved. ONLY the sub registers are reserved. IX and IY
   // reservations are not affected by this code
-  if (!HasIdxHalfRegs) {
-    for (Register Reg : {Z80::IXH, Z80::IXL, Z80::IYH, Z80::IYL})
-      Reserved.set(Reg);
-  }
+//  if (!HasIdxHalfRegs) {
+//    for (Register Reg : {Z80::IXH, Z80::IXL, Z80::IYH, Z80::IYL})
+//      Reserved.set(Reg);
+//  }
 
   return Reserved;
 }

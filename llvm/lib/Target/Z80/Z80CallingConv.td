@@ -43,6 +43,12 @@ def CC_Z80_Reg : CallingConv<[
 
 def CC_Z80_C : CallingConv<[
   CCIfByVal<CCPassByVal<2, 1>>,
+
+  CCIfType<[ i1 ], CCPromoteToType<i8>>,
+
+  CCIfType<[ i8 ], CCAssignToReg<[ A, B, C ]>>,
+  // CCIfType<[ i16 ], CCAssignToReg<[ HL, DE, BC ]>>,
+
   CCIfType<[ i1, i8 ], CCPromoteToType<i16>>,
   CCIfType<[ i16 ], CCAssignToStack<2, 1>>,
 ]>;
@@ -98,7 +104,7 @@ def CC_Z80 : CallingConv<[
 //===----------------------------------------------------------------------===//
 def RetCC_Z80_C : CallingConv<[
   CCIfType<[ i16 ], CCAssignToReg<[ HL, DE, BC, IY ]>>,
-  CCIfType<[ i8 ], CCAssignToReg<[ A, L, H, E, D, C, B, IYL, IYH ]>>
+  CCIfType<[ i8 ], CCAssignToReg<[ A, L, H, E, D, C, B]>>
 ]>;
 def RetCC_EZ80_C : CallingConv<[
   CCDelegateTo<RetCC_Z80_Reg>,

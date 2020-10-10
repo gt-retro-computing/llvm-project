@@ -458,31 +458,9 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       // Neither are index registers.
       BuildMI(MBB, MI, DL, get(Z80::LD8gg), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
-    } else if (Z80::I8RegClass.contains(DstReg, SrcReg)) {
-      assert(Subtarget.hasIndexHalfRegs() && "Need  index half registers");
-      // Both are index registers.
-      if (Z80::X8RegClass.contains(DstReg, SrcReg)) {
-        BuildMI(MBB, MI, DL, get(Z80::LD8xx), DstReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      } else if (Z80::Y8RegClass.contains(DstReg, SrcReg)) {
-        BuildMI(MBB, MI, DL, get(Z80::LD8yy), DstReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      } else {
-        // We are copying between different index registers, so we need to use
-        // an intermediate register.
-        BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::PUSH24AF : Z80::PUSH16AF))
-            ->findRegisterUseOperand(Z80::AF)->setIsUndef();
-        BuildMI(MBB, MI, DL, get(Z80::X8RegClass.contains(SrcReg) ? Z80::LD8xx
-                                                                  : Z80::LD8yy),
-                Z80::A).addReg(SrcReg, getKillRegState(KillSrc));
-        BuildMI(MBB, MI, DL, get(Z80::X8RegClass.contains(DstReg) ? Z80::LD8xx
-                                                                  : Z80::LD8yy),
-                DstReg).addReg(Z80::A);
-        BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::POP24AF : Z80::POP16AF));
-      }
     } else {
       MBB.dump();
-      assert(Subtarget.hasIndexHalfRegs() && "Need  index half registers");
+      assert(Subtarget.hasIndexHalfRegs() && "Need index half registers");
       // Only one is an index register, which isn't directly possible if one of
       // them is from HL.  If so, surround with EX DE,HL and use DE instead.
       bool NeedEX = false;
@@ -935,13 +913,13 @@ bool Z80InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Z80::LD8ro:
   case Z80::LD8rp: {
     MachineOperand &DstOp = MI.getOperand(0);
-    if (Z80::I8RegClass.contains(DstOp.getReg())) {
-      BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::PUSH24AF : Z80::PUSH16AF))
-          ->findRegisterUseOperand(Z80::AF)->setIsUndef();
-      copyPhysReg(MBB, Next, DL, DstOp.getReg(), Z80::A, true);
-      DstOp.setReg(Z80::A);
-      BuildMI(MBB, Next, DL, get(Is24Bit ? Z80::POP24AF : Z80::POP16AF));
-    }
+//    if (Z80::I8RegClass.contains(DstOp.getReg())) {
+//      BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::PUSH24AF : Z80::PUSH16AF))
+//          ->findRegisterUseOperand(Z80::AF)->setIsUndef();
+//      copyPhysReg(MBB, Next, DL, DstOp.getReg(), Z80::A, true);
+//      DstOp.setReg(Z80::A);
+//      BuildMI(MBB, Next, DL, get(Is24Bit ? Z80::POP24AF : Z80::POP16AF));
+//    }
     MI.setDesc(get(Opc == Z80::LD8ro ? Z80::LD8go : Z80::LD8gp));
     break;
   }
@@ -1024,14 +1002,6 @@ bool Z80InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Z80::LD8or:
   case Z80::LD8pr: {
     MachineOperand &SrcOp = MI.getOperand(MI.getNumExplicitOperands() - 1);
-    if (Z80::I8RegClass.contains(SrcOp.getReg())) {
-      BuildMI(MBB, MI, DL, get(Is24Bit ? Z80::PUSH24AF : Z80::PUSH16AF))
-          ->findRegisterUseOperand(Z80::AF)->setIsUndef();
-      copyPhysReg(MBB, MI, DL, Z80::A, SrcOp.getReg(), SrcOp.isKill());
-      SrcOp.setReg(Z80::A);
-      SrcOp.setIsKill();
-      BuildMI(MBB, Next, DL, get(Is24Bit ? Z80::POP24AF : Z80::POP16AF));
-    }
     MI.setDesc(get(Opc == Z80::LD8or ? Z80::LD8og : Z80::LD8pg));
     break;
   }

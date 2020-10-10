@@ -169,6 +169,7 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::INI16:
     case Z80::RLC8r:
     case Z80::RRC8r:
+    case Z80::OUTI16:
       break;
     default:
       MI.dump();

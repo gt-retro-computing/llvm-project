@@ -44,12 +44,12 @@ def H : Z80Reg<"h", 4>;
 def L : Z80Reg<"l", 5>;
 
 // 8-bit index registers
-let CostPerUse = 1 in {
-def IXH : Z80Reg<"ixh", 4>;
-def IXL : Z80Reg<"ixl", 5>;
-def IYH : Z80Reg<"iyh", 4>;
-def IYL : Z80Reg<"iyl", 5>;
-}
+//let CostPerUse = -1 in {
+//def IXH : Z80Reg<"ixh", 4>;
+//def IXL : Z80Reg<"ixl", 5>;
+//def IYH : Z80Reg<"iyh", 4>;
+//def IYL : Z80Reg<"iyl", 5>;
+//}
 
 let SubRegIndices = [sub_high, sub_low], CoveredBySubRegs = 1 in {
 // 16-bit registers
@@ -57,11 +57,11 @@ def AF : Z80RegWithSubRegs<"af", [A,F], 3>;
 def BC : Z80RegWithSubRegs<"bc", [B,C], 0>;
 def DE : Z80RegWithSubRegs<"de", [D,E], 1>;
 def HL : Z80RegWithSubRegs<"hl", [H,L], 2>;
+}
 // 16-bit index registers
 let CostPerUse = 1 in {
-def IX : Z80RegWithSubRegs<"ix", [IXH,IXL], 2>;
-def IY : Z80RegWithSubRegs<"iy", [IYH,IYL], 2>;
-}
+def IX : Z80Reg<"ix", 2>;
+def IY : Z80Reg<"iy", 2>;
 }
 def SPS : Z80Reg<"sp", 3>;
 
@@ -89,10 +89,9 @@ class Z80RC24<dag regList> : RegisterClass<"Z80", [i24], 8, regList>;
 
 def G8  : Z80RC8 <(add A, L, E, C, H, D, B)>;
 def O8  : Z80RC8 <(add A, E, C, D, B)>;
-def Y8  : Z80RC8 <(add O8, IYL, IYH)>;
-def X8  : Z80RC8 <(add O8, IXL, IXH)>;
-def I8  : Z80RC8 <(add IYL, IYH, IXL, IXH)>;
-def R8  : Z80RC8 <(add G8, I8)>;
+def Y8  : Z80RC8 <(add O8)>;
+def X8  : Z80RC8 <(add O8)>;
+def R8  : Z80RC8 <(add G8)>;
 let CopyCost = -1 in
 def F8  : Z80RC8 <(add F)>;
 
