@@ -146,7 +146,12 @@ Z80TargetInfoBase::convertConstraint(const char *&Constraint) const {
   case 'c':
   case 'd':
   case 'e':
-  case 'h':
+  case 'h': {
+    if (Constraint[1] == 'l') {
+      Len = 2;
+      break;
+    }
+  }
   case 'l':
     Len = 1;
     break;

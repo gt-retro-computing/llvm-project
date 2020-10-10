@@ -117,12 +117,16 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
 
   switch (OpCode) {
   case Z80::BIT8bg:
+  case Z80::BIT8bo:
   case Z80::SRL8r:
   case Z80::SRA8r:
   case Z80::SLA8r:
   case Z80::RR8r:
   case Z80::RL8r:
+  case Z80::RLC8r:
+  case Z80::RRC8r:
     EmitCBPrefix = true;
+    break;
   default:
     break;
   }
@@ -143,10 +147,13 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::LD16am:
     case Z80::LD16om:
     case Z80::INC16r:
+    case Z80::ADD16aa:
       Reg = MI.getOperand(0).getReg();
       break;
+    case Z80::BIT8bo: // BIT b, IX/IY, Offset
     case Z80::LD8go:
     case Z80::LD16SP: // LD sp, IX/IY/HL Operands: [SP, rp]
+    case Z80::LD16ma:
       Reg = MI.getOperand(1).getReg();
       break;
     // Not IX IY Cases
@@ -159,6 +166,9 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::RL8r:
     case Z80::OUTcr:
     case Z80::INrc:
+    case Z80::INI16:
+    case Z80::RLC8r:
+    case Z80::RRC8r:
       break;
     default:
       MI.dump();
@@ -230,11 +240,17 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
     PatchType = RegPatch::R16;
     break;
     // 8 Bit Register Patches
+  case Z80::LD8pg:
+    Reg = getZ80RegisterEncoding(MI, MI.getOperand(1).getReg());
+    PatchType = RegPatch::R8_SRC;
+    break;
   case Z80::LD8go:
   case Z80::LD8ri:
   case Z80::LD8gp:
   case Z80::INrc:
   case Z80::OUTcr:
+  case Z80::DEC8r:
+  case Z80::INC8r:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(0).getReg());
     PatchType = RegPatch::R8_DST;
     break;
@@ -267,6 +283,10 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
     Reg = MI.getOperand(0).getImm();
     Reg2 = getZ80RegisterEncoding(MI, MI.getOperand(1).getReg());
     PatchType = RegPatch::R8_8;
+    break;
+  case Z80::BIT8bo:
+    Reg = MI.getOperand(0).getImm();
+    PatchType = RegPatch::R8_DST;
     break;
   }
 
@@ -320,6 +340,9 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
     case Z80::JP16CC:
     case Z80::CALL16:
     case Z80::CALL16CC:
+    case Z80::LD8ma:
+    case Z80::LD8am:
+    case Z80::LD16ma:
       Is16Bit = true;
       // Default Operand 0
       break;
@@ -348,8 +371,12 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
       break;
     case Z80::LD8og:
     case Z80::LD8ri:
+    case Z80::LD8pi:
       ImmOp = MI.getOperand(1);
       break;
+    // Prefix Imm
+    case Z80::BIT8bo:
+      return;
     default:
       MI.dump();
       llvm_unreachable("Unpatched HasImm");
@@ -380,8 +407,16 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
         if (Opcode == Z80::DJNZ) {
           FixupKind = Z80::fixup_z80_pcrel8_b2;
         } else if (Opcode == Z80::JP16CC || Opcode == Z80::JP16 ||
-            Opcode == Z80::CALL16 || Opcode == Z80::CALL16CC) {
+                   Opcode == Z80::CALL16 || Opcode == Z80::CALL16CC ||
+                   Opcode == Z80::LD8ma || Opcode == Z80::LD8am) {
           FixupKind = Z80::fixup_z80_addr16_b2;
+        } else if (Opcode == Z80::LD16ma) {
+          if (MI.getOperand(1).getReg() != Z80::IY &&
+              MI.getOperand(1).getReg() != Z80::IX) {
+            FixupKind = Z80::fixup_z80_addr16_b2;
+          } else {
+            FixupKind = Z80::fixup_z80_addr16_b3;
+          }
         } else if (Opcode == Z80::LD16am || Opcode == Z80::LD16om ||
                    Opcode == Z80::LD16ri) {
           if (MI.getOperand(0).getReg() != Z80::IY &&
@@ -403,8 +438,82 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
       ++MCNumFixups;
 
     } else {
+      MI.dump();
       llvm_unreachable("HasImm but got neither imm nor expr");
     }
+  }
+}
+
+void Z80MCCodeEmitter::emitZ80PrefixImmediate(const MCInst &MI,
+                                              const MCInstrDesc &Desc,
+                                              unsigned int CurByte,
+                                              raw_ostream &OS) const {
+  if (MI.getNumOperands() == 0)
+    return;
+
+  auto ImmOp = MI.getOperand(0);
+  auto Is16Bit = false;
+
+  auto Opcode = MI.getOpcode();
+  switch (Opcode) {
+  case Z80::BIT8bo:
+    ImmOp = MI.getOperand(2);
+    break;
+  default:
+    return;
+  }
+
+  // Emit
+  if (ImmOp.isImm()) {
+    if (Is16Bit)
+      emitWordLE(ImmOp.getImm(), CurByte, OS);
+    else
+      emitByte(ImmOp.getImm(), CurByte, OS);
+  } else if (ImmOp.isExpr()) {
+    llvm_unreachable("expr not supported as prefix right now");
+    // TODO: emit fixups
+    if (Is16Bit)
+      emitWordLE(0, CurByte, OS);
+    else
+      emitByte(0, CurByte, OS);
+
+    // Emit Fixups for Expr
+    const MCExpr *Expr = ImmOp.getExpr();
+    MCExpr::ExprKind Kind = Expr->getKind();
+    Z80::Fixups FixupKind = Z80::fixup_z80_invalid;
+    bool RelaxCandidate = false;
+    if (Kind == MCExpr::Target) {
+      llvm_unreachable("todo, support MCExpr::Target");
+    } else if (Kind == MCExpr::SymbolRef &&
+               cast<MCSymbolRefExpr>(Expr)->getKind() ==
+                   MCSymbolRefExpr::VK_None) {
+      if (Opcode == Z80::DJNZ) {
+        FixupKind = Z80::fixup_z80_pcrel8_b2;
+      } else if (Opcode == Z80::JP16CC || Opcode == Z80::JP16 ||
+                 Opcode == Z80::CALL16 || Opcode == Z80::CALL16CC) {
+        FixupKind = Z80::fixup_z80_addr16_b2;
+      } else if (Opcode == Z80::LD16am || Opcode == Z80::LD16om ||
+                 Opcode == Z80::LD16ri) {
+        if (MI.getOperand(0).getReg() != Z80::IY &&
+            MI.getOperand(0).getReg() != Z80::IX) {
+          FixupKind = Z80::fixup_z80_addr16_b2;
+        } else {
+          FixupKind = Z80::fixup_z80_addr16_b3;
+        }
+      }
+    }
+
+    if (FixupKind == Z80::fixup_z80_invalid) {
+      MI.dump();
+    }
+    assert(FixupKind != Z80::fixup_z80_invalid && "Unhandled expression!");
+    //
+    //    Fixups.push_back(
+    //        MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+    //    ++MCNumFixups;
+
+  } else {
+    llvm_unreachable("HasImm but got neither imm nor expr");
   }
 }
 
@@ -421,11 +530,13 @@ void Z80MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
   emitZ80Prefix(MI, MIDesc, CurrentByte, OS);
 
+  // Prefix immediate for Bit test and Set group
+  emitZ80PrefixImmediate(MI, MIDesc, CurrentByte, OS);
+
   // Primary OpCode Area
   uint8_t PrimaryOpcode = (TS & Z80II::OpcodeMask) >> Z80II::OpcodeShift;
   patchCC(MI, PrimaryOpcode);
   patchRegister(MI, PrimaryOpcode);
-
   emitByte(PrimaryOpcode, CurrentByte, OS);
 
   // Immediate Suffix

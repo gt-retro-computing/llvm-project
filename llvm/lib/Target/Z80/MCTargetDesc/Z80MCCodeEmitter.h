@@ -60,6 +60,8 @@ public:
                                  unsigned int RegisterNo) const;
   void emitWordLE(unsigned short C, unsigned int &CurByte,
                   raw_ostream &OS) const;
+  void emitZ80PrefixImmediate(const MCInst &MI, const MCInstrDesc &Desc,
+                              unsigned int CurByte, raw_ostream &OS) const;
 };
 
 MCCodeEmitter *createZ80MCCodeEmitter(const MCInstrInfo &MCII,

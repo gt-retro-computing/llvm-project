@@ -51,6 +51,18 @@ bool Z80ExpandPseudoInst::runOnMachineFunction(MachineFunction &MF) {
         MI.setDesc(II->get(Is24BitMode ? Z80::JP24CC : Z80::JP16CC));
         Changed = true;
         break;
+      case Z80::LD8pg:
+      {
+        auto Reg = MI.getOperand(0).getReg();
+        if (Reg == Z80::IX || Reg == Z80::IY) {
+          MI.setDesc(II->get(Z80::LD8og));
+          MachineOperand backup = MI.getOperand(1);
+          MI.RemoveOperand(1);
+          MI.addOperand(MachineOperand::CreateImm(0));
+          MI.addOperand(backup);
+        }
+        break;
+      }
       case Z80::LD8gp: // FIXME: This is "technically" a bug. IX/IY -> go
       {
         auto Reg = MI.getOperand(1).getReg();
