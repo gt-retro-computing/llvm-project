@@ -72,6 +72,18 @@ bool Z80ExpandPseudoInst::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
       }
+      case Z80::LD8pi:
+      {
+        auto Reg = MI.getOperand(0).getReg();
+        if (Reg == Z80::IX || Reg == Z80::IY) {
+          MI.setDesc(II->get(Z80::LD8oi));
+          auto Val = MI.getOperand(1);
+          MI.RemoveOperand(1);
+          MI.addOperand(MachineOperand::CreateImm(0));
+          MI.addOperand(Val);
+        }
+        break;
+      }
       }
     }
   }

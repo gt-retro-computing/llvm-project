@@ -558,10 +558,10 @@ let mayStore = 1 in {
 def : Pat<(store G24:$src, offpat:$dst), (LD24or off:$dst, R24:$src)>;
 
 let mayStore = 1 in {
-  def LD8pi  : I8oi  <  NoPre, 0x36, "ld", "\t$dst, $src", "",
+  def LD8pi  : I8oi  <  NoPre, 0x36, "ld", "\t(${dst}), $src", "",
                       (outs), (ins ptr:$dst, i8imm:$src),
                       [(store (i8 imm:$src),   iPTR:$dst)]>;
-  def LD8oi  : I8oi  <Idx0Pre, 0x36, "ld", "\t$dst, $src", "",
+  def LD8oi  : I8oi  <Idx0Pre, 0x36, "ld", "\t(${dst}), $src", "",
                       (outs), (ins off:$dst, i8imm:$src),
                       [(store (i8 imm:$src), offpat:$dst)]>;
 }

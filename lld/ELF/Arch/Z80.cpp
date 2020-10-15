@@ -58,22 +58,27 @@ void Z80::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   auto type = rel.type;
   switch (type) {
   case R_Z80_ADDR16_B2:
+    val += read16le(loc + 1);
     checkIntUInt(loc, val, 16, rel);
     write16le(loc + 1, val & 0xFFFF);
     break;
   case R_Z80_ADDR16_B3:
+    val += read16le(loc + 2);
     checkIntUInt(loc, val, 16, rel);
     write16le(loc + 2, val & 0xFFFF);
     break;
   case R_Z80_8:
+    val += *loc;
     checkIntUInt(loc, val, 8, rel);
     *loc = (val & 0xFF);
     break;
   case R_Z80_16:
+    val += read16le(loc);
     checkIntUInt(loc, val, 16, rel);
     write16le(loc, val & 0xFFFF);
     break;
   case R_Z80_PCREL8_B2: {
+    val += *(loc + 1);
     int64_t fixed_val = ((int64_t)val - 2);
     checkInt(loc, fixed_val, 8, rel);
     *(loc + 1) = (uint8_t)fixed_val;

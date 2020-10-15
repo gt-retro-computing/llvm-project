@@ -21,26 +21,14 @@ void Z80MCAsmInfo::anchor() {}
 Z80MCAsmInfo::Z80MCAsmInfo(const Triple &T) {
   bool Is16Bit = T.isArch16Bit() || T.getEnvironment() == Triple::CODE16;
   CodePointerSize = CalleeSaveStackSlotSize = Is16Bit ? 2 : 4;
-  MaxInstLength = 6;
   DollarIsPC = true;
   CommentString = ";";
-
-  PrivateGlobalPrefix = "_g";
-  PrivateLabelPrefix = "_p";
-  LinkerPrivateGlobalPrefix = "lp_";
   IsLittleEndian = true;
   AssemblerDialect = !Is16Bit;
-  SupportsQuotedNames = false;
   HasFunctionAlignment = false;
   HasDotTypeDotSizeDirective = false;
-  WeakDirective = "\tweak\t";
   UseIntegratedAssembler = true;
-  UseLogicalShr = false;
-  HasSingleParameterDotFile = false;
-  DwarfFileDirective = "\tfile\t";
-  DwarfLocDirective = "\tloc\t";
-  NeedsLocalForSize = false;
-  HasIdentDirective = false;
+  PrivateGlobalPrefix = PrivateLabelPrefix = "L";
 
   // Debug Information
   SupportsDebugInformation = true;

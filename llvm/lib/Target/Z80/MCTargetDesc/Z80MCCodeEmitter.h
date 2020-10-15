@@ -62,6 +62,8 @@ public:
                   raw_ostream &OS) const;
   void emitZ80PrefixImmediate(const MCInst &MI, const MCInstrDesc &Desc,
                               unsigned int CurByte, raw_ostream &OS) const;
+  void emitImmVal(unsigned int Value, bool Is16Bit,
+                  unsigned int &CurByte, raw_ostream &OS) const;
 };
 
 MCCodeEmitter *createZ80MCCodeEmitter(const MCInstrInfo &MCII,

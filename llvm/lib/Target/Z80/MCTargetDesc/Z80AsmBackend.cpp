@@ -73,9 +73,11 @@ void Z80AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   auto &Ctx = Asm.getContext();
   auto Info = getFixupKindInfo(Fixup.getKind());
 
-  Value = adjustFixupValue(Fixup, Value, Ctx);
   if (Value == 0)
     return; // Since we substitute zero anyways.
+
+  Value = adjustFixupValue(Fixup, Value, Ctx);
+
 
   Value <<= Info.TargetOffset;
 

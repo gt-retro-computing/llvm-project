@@ -148,6 +148,7 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::LD16om:
     case Z80::INC16r:
     case Z80::ADD16aa:
+    case Z80::LD8oi:
       Reg = MI.getOperand(0).getReg();
       break;
     case Z80::BIT8bo: // BIT b, IX/IY, Offset
@@ -170,6 +171,11 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::RLC8r:
     case Z80::RRC8r:
     case Z80::OUTI16:
+    case Z80::ADC16ao:
+    case Z80::ADC16aa:
+    case Z80::SBC16aa:
+    case Z80::ADC16SP:
+    case Z80::SBC16SP:
       break;
     default:
       MI.dump();
@@ -231,13 +237,12 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
     PatchType = RegPatch::R16;
     break;
   case Z80::SBC16ao:
+  case Z80::ADC16ao:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(0).getReg());
-    assert(Reg == 0b00 || Reg == 0b01); // only BC/DE should show up.
     PatchType = RegPatch::R16;
     break;
   case Z80::ADD16ao:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(2).getReg());
-    assert(Reg == 0b00 || Reg == 0b01); // only BC/DE should show up.
     PatchType = RegPatch::R16;
     break;
     // 8 Bit Register Patches
@@ -297,15 +302,18 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
     PrimaryOpcode |= Reg << 4;
     break;
   case RegPatch::R8_DST:
-    assert(Reg <= 0b111 && Reg != 0b110);
+    assert(Reg <= 0b111);
     PrimaryOpcode |= Reg << 3;
     break;
   case RegPatch::R8_SRC:
-    assert(Reg <= 0b111 && Reg != 0b110);
+    assert(Reg <= 0b111);
     PrimaryOpcode |= Reg;
     break;
   case RegPatch::R8_8:
-    assert(Reg <= 0b111 && Reg != 0b110 && Reg2 <= 0b111 && Reg2 != 0b110);
+    if (!(Reg <= 0b111 && Reg2 <= 0b111)) {
+      MI.dump();
+    }
+    assert(Reg <= 0b111 && Reg2 <= 0b111);
     PrimaryOpcode |= (Reg << 3) | Reg2;
     break;
   case RegPatch::NoPatch:
@@ -313,6 +321,14 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
   default:
     llvm_unreachable("Unsupported");
   }
+}
+
+void Z80MCCodeEmitter::emitImmVal(unsigned Value, bool Is16Bit,
+                                  unsigned &CurByte, raw_ostream &OS) const {
+  if (Is16Bit)
+    emitWordLE(Value, CurByte, OS);
+  else
+    emitByte(Value, CurByte, OS);
 }
 
 void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
@@ -333,6 +349,15 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
 
   if (TS & Z80II::HasImm || TS & Z80II::HasOff) {
     switch (Opcode) {
+    // Special Case: both offset and imm.
+    case Z80::LD8oi:
+      ImmOp = MI.getOperand(2);
+      {
+        auto Offset = MI.getOperand(1);
+        assert(Offset.isImm() && "LD8oi currently requires a imm as Offset not expr");
+        emitImmVal(Offset.getImm(), false, CurByte, OS);
+      }
+      break;
     case Z80::DJNZ:
       isPCRel = true;
       Is16Bit = false;
@@ -375,7 +400,7 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
     case Z80::LD8pi:
       ImmOp = MI.getOperand(1);
       break;
-    // Prefix Imm
+    // Prefix Imm, No action needed here. Return immediately
     case Z80::BIT8bo:
       return;
     default:
@@ -384,34 +409,37 @@ void Z80MCCodeEmitter::emitImmediate(const MCInst &MI, unsigned &CurByte,
     }
 
     if (ImmOp.isImm()) {
-      if (Is16Bit)
-        emitWordLE(ImmOp.getImm(), CurByte, OS);
-      else
-        emitByte(ImmOp.getImm(), CurByte, OS);
+      emitImmVal(ImmOp.getImm(), Is16Bit, CurByte, OS);
     } else if (ImmOp.isExpr()) {
-      // TODO: emit fixups
-      if (Is16Bit)
-        emitWordLE(0, CurByte, OS);
-      else
-        emitByte(0, CurByte, OS);
-
       // Emit Fixups for Expr
       const MCExpr *Expr = ImmOp.getExpr();
       MCExpr::ExprKind Kind = Expr->getKind();
       Z80::Fixups FixupKind = Z80::fixup_z80_invalid;
-      bool RelaxCandidate = false;
+
+      if (Kind == MCExpr::Binary) {
+        auto BinExp = cast<MCBinaryExpr>(Expr);
+        assert(BinExp->getRHS()->getKind() == MCExpr::Constant && "Only support Symbol + Constant BinExp");
+        assert(BinExp->getOpcode() == MCBinaryExpr::Add && "Only add BinExp is supported RN");
+        assert(cast<MCConstantExpr>(BinExp->getRHS())->getValue() != 0 );
+        emitImmVal(cast<MCConstantExpr>(BinExp->getRHS())->getValue(), Is16Bit, CurByte, OS);
+      } else {
+        emitImmVal(0, Is16Bit, CurByte, OS);
+      }
+
       if (Kind == MCExpr::Target) {
         llvm_unreachable("todo, support MCExpr::Target");
-      } else if (Kind == MCExpr::SymbolRef &&
+      } else if ((Kind == MCExpr::SymbolRef &&
                  cast<MCSymbolRefExpr>(Expr)->getKind() ==
-                     MCSymbolRefExpr::VK_None) {
+                     MCSymbolRefExpr::VK_None) ||
+                 (Kind == MCExpr::Binary &&
+                  cast<MCBinaryExpr>(Expr)->getLHS()->getKind() == MCExpr::SymbolRef)) {
         if (Opcode == Z80::DJNZ) {
           FixupKind = Z80::fixup_z80_pcrel8_b2;
         } else if (Opcode == Z80::JP16CC || Opcode == Z80::JP16 ||
                    Opcode == Z80::CALL16 || Opcode == Z80::CALL16CC ||
                    Opcode == Z80::LD8ma || Opcode == Z80::LD8am) {
           FixupKind = Z80::fixup_z80_addr16_b2;
-        } else if (Opcode == Z80::LD16ma) {
+        } else if (Opcode == Z80::LD16ma ) {
           if (MI.getOperand(1).getReg() != Z80::IY &&
               MI.getOperand(1).getReg() != Z80::IX) {
             FixupKind = Z80::fixup_z80_addr16_b2;
