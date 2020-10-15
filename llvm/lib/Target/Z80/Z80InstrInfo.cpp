@@ -548,6 +548,7 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(DstReg, RegState::Implicit | getRegState(MI->getOperand(0)));
     return;
   }
+
   Is24Bit = Z80::R24RegClass.contains(DstReg, SrcReg);
   if (Is24Bit == Subtarget.is24Bit()) {
     // Special case DE/HL = HL/DE<kill> as EX DE,HL.
@@ -586,8 +587,19 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
   }
+
+  if (Z80::R16RegClass.contains(SrcReg) && Z80::R8RegClass.contains(DstReg)) {
+    // FIXME: I am pretty sure this is not correct? But maybe this is what it wants?
+    MCRegister SrcLo = RI.getSubReg(SrcReg, Z80::sub_low);
+    copyPhysReg(MBB, MI, DL, DstReg, SrcLo, KillSrc);
+    return;
+  }
   // Otherwise, implement as two copies. A 16-bit copy should copy high and low
   // 8 bits separately.
+  if (!Z80::R16RegClass.contains(DstReg, SrcReg)) {
+    MI->getParent()->dump(); // MBB
+    MI->getParent()->getParent()->dump(); //MF
+  }
   assert(Z80::R16RegClass.contains(DstReg, SrcReg) && "Unknown copy width");
   unsigned SubLo = Z80::sub_low;
   unsigned SubHi = Z80::sub_high;
