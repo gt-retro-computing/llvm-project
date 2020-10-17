@@ -29,22 +29,14 @@ Z80LegalizerInfo::Z80LegalizerInfo(const Z80Subtarget &STI,
   LLT s1 = LLT::scalar(1);
   LLT s8 = LLT::scalar(8);
   LLT s16 = LLT::scalar(16);
-  LLT s24 = LLT::scalar(24);
   LLT s32 = LLT::scalar(32);
   LLT s64 = LLT::scalar(64);
-  LLT sMax = Is24Bit ? s24 : s16;
-  auto LegalTypes24 = {p0, s8, s16, s24}, LegalTypes16 = {p0, s8, s16};
-  auto LegalTypes = Is24Bit ? LegalTypes24 : LegalTypes16;
-  auto LegalScalars24 = {s8, s16, s24}, LegalScalars16 = {s8, s16};
-  auto LegalScalars = Is24Bit ? LegalScalars24 : LegalScalars16;
-  auto LegalLibcallScalars24 = {s8, s16, s24, s32, s64};
-  auto LegalLibcallScalars16 = {s8, s16, s32, s64};
-  auto LegalLibcallScalars =
-      Is24Bit ? LegalLibcallScalars24 : LegalLibcallScalars16;
-  auto NotMax24 = {s8, s16}, NotMax16 = {s8};
-  auto NotMax = Is24Bit ? NotMax24 : NotMax16;
-  auto NotMin24 = {s16, s24}, NotMin16 = {s16};
-  auto NotMin = Is24Bit ? NotMin24 : NotMin16;
+  LLT sMax = s16;
+  auto LegalTypes = {p0, s8, s16};
+  auto LegalScalars = {s8, s16};
+  auto LegalLibcallScalars = {s8, s16, s32, s64};
+  auto NotMax = { s8 };
+  auto NotMin = {s16};
   auto NotMaxWithOne24 = {s1, s8, s16}, NotMaxWithOne16 = {s1, s8};
   auto NotMaxWithOne = Is24Bit ? NotMaxWithOne24 : NotMaxWithOne16;
 

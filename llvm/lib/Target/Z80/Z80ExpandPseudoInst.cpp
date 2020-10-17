@@ -42,7 +42,22 @@ bool Z80ExpandPseudoInst::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
+      auto &DL = MI.getDebugLoc();
+
       switch (MI.getOpcode()) {
+      case Z80::LEA16ro:
+      {
+        auto DestReg = MI.getOperand(0).getReg();
+        auto SrcReg = MI.getOperand(1).getReg();
+        auto Offset = MI.getOperand(2).getImm();
+        assert(Z80::G16RegClass.contains(DestReg) && "LEA Gotta load into G16 rn");
+        assert(Offset == 0 && "Not handling LEA offset case right now");
+        BuildMI(MBB, MI, DL, II->get(Z80::PUSH16r)).addReg(SrcReg, MI.getOperand(1).isKill() ? RegState::Kill : 0);
+        MI.setDesc(II->get(Z80::POP16r));
+        MI.RemoveOperand(2);
+        MI.RemoveOperand(1);
+      }
+      break;
       case Z80::JQ:
         MI.setDesc(II->get(Is24BitMode ? Z80::JP24 : Z80::JP16));
         Changed = true;

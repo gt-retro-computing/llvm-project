@@ -81,6 +81,7 @@ def Z80rrc_flag      : SDNode<"Z80ISD::RRC",     SDTUnOpRF>;
 def Z80rl_flag       : SDNode<"Z80ISD::RL",      SDTUnOpRFF>;
 def Z80rr_flag       : SDNode<"Z80ISD::RR",      SDTUnOpRFF>;
 def Z80sla_flag      : SDNode<"Z80ISD::SLA",     SDTUnOpRF>;
+def Z80sll_flag      : SDNode<"Z80ISD::SLL",     SDTUnOpRF>;
 def Z80sra_flag      : SDNode<"Z80ISD::SRA",     SDTUnOpRF>;
 def Z80srl_flag      : SDNode<"Z80ISD::SRL",     SDTUnOpRF>;
 def Z80bit_flag      : SDNode<"Z80ISD::BIT",     SDTBitOpF>;
@@ -864,6 +865,7 @@ defm RRC : UnOp8RF  <CBPre, 0x8, "rrc">;
 defm RL  : UnOp8RFF <CBPre, 0x10, "rl">;
 defm RR  : UnOp8RFF <CBPre, 0x18, "rr">;
 defm SLA : UnOp8RF  <CBPre, 0x20, "sla">;
+defm SLL : UnOp8RF  <CBPre, 0x30, "sll">;
 defm SRA : UnOp8RF  <CBPre, 0x28, "sra">;
 defm SRL : UnOp8RF  <CBPre, 0x38, "srl">;
 defm BIT : BitOp8F  <       1, "bit">;
@@ -958,9 +960,9 @@ def : Pat<(addc A24:$imp, O24:$src), (ADD24ao A24:$imp, O24:$src)>;
 
 let Defs = [HL, F] in {
   let Uses = [HL, F] in {
-    def SBC16aa : I16<EDPre, 0x42, "sbc", "\thl, hl", "", (outs), (ins),
+    def SBC16aa : I16<EDPre, 0x62, "sbc", "\thl, hl", "", (outs), (ins),
                       [(set  HL, F, (Z80sbc_flag  HL, HL,       F))]>;
-    def ADC16aa : I16<EDPre, 0x4A, "adc", "\thl, hl", "", (outs), (ins),
+    def ADC16aa : I16<EDPre, 0x6A, "adc", "\thl, hl", "", (outs), (ins),
                       [(set  HL, F, (Z80adc_flag  HL, HL,       F))]>;
     def SBC16ao : I16<EDPre, 0x42, "sbc", "\thl, $src", "",
                       (outs), (ins O16:$src),

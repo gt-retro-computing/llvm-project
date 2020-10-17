@@ -32,7 +32,7 @@ enum NodeType : unsigned {
   Wrapper,
 
   /// Shift/Rotate
-  RLC, RRC, RL, RR, SLA, SRA, SRL,
+  RLC, RRC, RL, RR, SLA, SRA, SRL, SLL,
 
   /// Arithmetic operation with flags results.
   INC, DEC, ADD, ADC, SUB, SBC, AND, XOR, OR,

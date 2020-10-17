@@ -121,6 +121,7 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
   case Z80::SRL8r:
   case Z80::SRA8r:
   case Z80::SLA8r:
+  case Z80::SLL8r:
   case Z80::RR8r:
   case Z80::RL8r:
   case Z80::RLC8r:
@@ -163,6 +164,7 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::SRL8r:
     case Z80::SRA8r:
     case Z80::SLA8r:
+    case Z80::SLL8r:
     case Z80::RR8r:
     case Z80::RL8r:
     case Z80::OUTcr:
@@ -270,6 +272,7 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
   case Z80::SRL8r:
   case Z80::SRA8r:
   case Z80::SLA8r:
+  case Z80::SLL8r:
   case Z80::RR8r:
   case Z80::RL8r:
     Reg = getZ80RegisterEncoding(MI, MI.getOperand(0).getReg());
