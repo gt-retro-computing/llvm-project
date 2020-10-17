@@ -150,6 +150,7 @@ void Z80MCCodeEmitter::emitZ80Prefix(const MCInst &MI,
     case Z80::INC16r:
     case Z80::ADD16aa:
     case Z80::LD8oi:
+    case Z80::JP16r:
       Reg = MI.getOperand(0).getReg();
       break;
     case Z80::BIT8bo: // BIT b, IX/IY, Offset
@@ -270,6 +271,7 @@ void Z80MCCodeEmitter::patchRegister(const MCInst &MI,
   case Z80::SBC8ar:
   case Z80::ADC8ar:
   case Z80::SRL8r:
+  case Z80::RLC8r:
   case Z80::SRA8r:
   case Z80::SLA8r:
   case Z80::SLL8r:

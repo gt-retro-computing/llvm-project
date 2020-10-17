@@ -376,9 +376,9 @@ let isBranch = 1, isTerminator = 1 in {
     def JP24 : I24i<NoPre, 0xC3, "jp", "\t$tgt", "",
                     (outs), (ins jmptarget:$tgt)>;
     let isIndirectBranch = 1 in {
-      def JP16r : I16<NoPre, 0xE9, "jp", "\t(${tgt})", "",
+      def JP16r : I16<Idx1Pre, 0xE9, "jp", "\t(${tgt})", "",
                       (outs), (ins A16:$tgt), [(brind A16:$tgt)]>;
-      def JP24r : I24<NoPre, 0xE9, "jp", "\t(${tgt})", "",
+      def JP24r : I24<Idx1Pre, 0xE9, "jp", "\t(${tgt})", "",
                       (outs), (ins A24:$tgt), [(brind A24:$tgt)]>;
     }
   }
